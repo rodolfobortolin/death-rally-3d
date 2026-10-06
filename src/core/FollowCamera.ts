@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { clamp, damp } from './math';
 
-export type CameraMode = 'classic' | 'chase';
+export type CameraMode = 'classic' | 'chase' | 'cinematic';
 
 /**
  * Top-down camera. "classic" keeps a fixed north-up orientation like the original
@@ -14,6 +14,8 @@ export class FollowCamera {
   private readonly desired = new THREE.Vector3();
   private yaw = 0;
   private height = 48;
+  private shake = 0;
+  private orbit = 0;
 
   constructor(aspect: number) {
     this.camera = new THREE.PerspectiveCamera(38, aspect, 1, 2000);
@@ -21,6 +23,11 @@ export class FollowCamera {
 
   toggleMode(): void {
     this.mode = this.mode === 'classic' ? 'chase' : 'classic';
+  }
+
+  /** Adds screen shake (explosions, hard hits); decays automatically. */
+  addShake(amount: number): void {
+    this.shake = Math.min(1.5, this.shake + amount);
   }
 
   snapTo(x: number, z: number, heading: number): void {
@@ -44,7 +51,14 @@ export class FollowCamera {
 
     let offX = 0;
     let offZ = this.height * 0.42;
-    if (this.mode === 'chase') {
+    let height = this.height;
+    if (this.mode === 'cinematic') {
+      // Slow orbit for the menu background.
+      this.orbit += dt * 0.12;
+      height = 26;
+      offX = Math.sin(this.orbit) * 42;
+      offZ = Math.cos(this.orbit) * 42;
+    } else if (this.mode === 'chase') {
       let diff = heading - this.yaw;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       this.yaw += diff * damp(2.5, dt);
@@ -53,8 +67,15 @@ export class FollowCamera {
     } else {
       this.yaw = heading;
     }
-    this.camera.position.set(this.focus.x + offX, this.height, this.focus.z + offZ);
+    this.camera.position.set(this.focus.x + offX, height, this.focus.z + offZ);
     this.camera.lookAt(this.focus);
+    if (this.shake > 0.001) {
+      const s = this.shake * this.shake;
+      this.camera.position.x += (Math.random() - 0.5) * s * 1.6;
+      this.camera.position.z += (Math.random() - 0.5) * s * 1.6;
+      this.camera.rotation.z += (Math.random() - 0.5) * s * 0.03;
+      this.shake = Math.max(0, this.shake - dt * 2.2);
+    }
   }
 
   resize(aspect: number): void {

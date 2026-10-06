@@ -1,10 +1,23 @@
-/** Normalized driving input, independent from the physical device. */
+/** Normalized driving input, independent from the physical device or the AI. */
 export interface DriveInput {
   throttle: number; // 0..1
   brake: number; // 0..1 (also reverse when stopped)
   steer: number; // -1 (left) .. 1 (right)
   handbrake: boolean;
+  boost: boolean;
+  fire: boolean;
+  dropMine: boolean;
 }
+
+export const NEUTRAL_INPUT: Readonly<DriveInput> = Object.freeze({
+  throttle: 0,
+  brake: 0,
+  steer: 0,
+  handbrake: false,
+  boost: false,
+  fire: false,
+  dropMine: false,
+});
 
 /** Keyboard input handler with edge-triggered "pressed" detection for actions. */
 export class Input {
@@ -25,8 +38,8 @@ export class Input {
     return codes.some((c) => this.down.has(c));
   }
 
-  wasPressed(code: string): boolean {
-    return this.pressedThisFrame.has(code);
+  wasPressed(...codes: string[]): boolean {
+    return codes.some((c) => this.pressedThisFrame.has(c));
   }
 
   /** Must be called once at the end of every frame. */
@@ -42,6 +55,9 @@ export class Input {
       brake: this.isDown('KeyS', 'ArrowDown') ? 1 : 0,
       steer: right - left,
       handbrake: this.isDown('Space'),
+      boost: this.isDown('ShiftLeft', 'ShiftRight', 'KeyL'),
+      fire: this.isDown('KeyJ', 'KeyZ'),
+      dropMine: this.wasPressed('KeyK', 'KeyX'),
     };
   }
 }

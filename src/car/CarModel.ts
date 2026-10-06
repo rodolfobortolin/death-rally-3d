@@ -12,6 +12,12 @@ export interface CarVisual {
   wheels: THREE.Object3D[];
   wheelRadius: number;
   brakeLightMaterial: THREE.MeshStandardMaterial;
+  /** Body paint, darkened when the car is wrecked. */
+  paintMaterial: THREE.MeshPhysicalMaterial;
+  /** Local position of the engine bay, where damage smoke comes from. */
+  engineOffset: THREE.Vector3;
+  /** Local position of the gun muzzle. */
+  muzzleOffset: THREE.Vector3;
   /** Rear wheel contact points in local space, used for skid marks and smoke. */
   rearWheelOffsets: THREE.Vector3[];
 }
@@ -134,6 +140,18 @@ export function createCarModel(options: CarModelOptions): CarVisual {
     body.add(strut);
   }
 
+  // Hood-mounted twin machine gun.
+  const gunMount = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.5), darkTrim);
+  gunMount.position.set(0, 1.03, 0.95);
+  gunMount.castShadow = true;
+  body.add(gunMount);
+  for (const x of [-0.09, 0.09]) {
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 8), chrome);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(x, 1.06, 1.45);
+    body.add(barrel);
+  }
+
   // Bumpers, grille and exhausts.
   const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(WIDTH - 0.05, 0.18, 0.16), darkTrim);
   frontBumper.position.set(0, 0.38, half + 0.02);
@@ -184,6 +202,9 @@ export function createCarModel(options: CarModelOptions): CarVisual {
     wheels,
     wheelRadius: WHEEL_RADIUS,
     brakeLightMaterial,
+    paintMaterial: paint,
+    engineOffset: new THREE.Vector3(0, 0.9, 1.4),
+    muzzleOffset: new THREE.Vector3(0, 1.06, 1.95),
     rearWheelOffsets: [new THREE.Vector3(-wheelX, 0, -AXLE_Z), new THREE.Vector3(wheelX, 0, -AXLE_Z)],
   };
 }

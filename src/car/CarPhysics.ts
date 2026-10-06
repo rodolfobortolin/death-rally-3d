@@ -75,8 +75,10 @@ export class CarPhysics {
     let vF = this.vx * fx + this.vz * fz;
     let vR = this.vx * rx + this.vz * rz;
 
-    // Longitudinal: throttle, brake and reverse.
-    const maxSpeed = s.maxSpeed * (1 - this.surfaceDrag * 0.45);
+    // Longitudinal: throttle, brake and reverse. Turbo raises both power and top speed.
+    const boosting = input.boost && input.throttle > 0;
+    const maxSpeed = s.maxSpeed * (1 - this.surfaceDrag * 0.45) * (boosting ? 1.3 : 1);
+    const acceleration = s.acceleration * (boosting ? 1.9 : 1);
     this.isBraking = false;
     if (input.throttle > 0) {
       if (vF < -0.5) {
@@ -84,7 +86,7 @@ export class CarPhysics {
         this.isBraking = true;
       } else {
         const ratio = clamp(vF / maxSpeed, 0, 1);
-        vF += s.acceleration * input.throttle * (1 - ratio * ratio) * dt;
+        vF += acceleration * input.throttle * (1 - ratio * ratio) * dt;
       }
     }
     if (input.brake > 0) {
@@ -129,6 +131,13 @@ export class CarPhysics {
     this.z += this.vz * dt;
     this.slip = vR;
     this.forwardSpeed = vF;
+  }
+
+  /** Adds an instantaneous velocity change (explosions, car-to-car hits). */
+  applyImpulse(dvx: number, dvz: number, spin = 0): void {
+    this.vx += dvx;
+    this.vz += dvz;
+    this.yawRate += spin;
   }
 
   /**

@@ -5,25 +5,116 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Death Rally 3D</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="app"></div>
-    <div id="hud">
+
+    <!-- In-race HUD -->
+    <div id="hud" class="hidden">
       <div class="hud-panel hud-top-left">
-        <div class="hud-label">LAP TIME</div>
-        <div id="hud-lap" class="hud-value">0:00.000</div>
-        <div class="hud-label">BEST</div>
+        <div class="hud-row">
+          <div>
+            <div class="hud-label">POS</div>
+            <div class="hud-pos"><span id="hud-pos">1</span><small>/<span id="hud-total">6</span></small></div>
+          </div>
+          <div>
+            <div class="hud-label">LAP</div>
+            <div class="hud-lap"><span id="hud-lap">1</span><small>/<span id="hud-laps">3</span></small></div>
+          </div>
+        </div>
+        <div class="hud-label">TIME</div>
+        <div id="hud-time" class="hud-value">0:00.000</div>
+        <div class="hud-label">BEST LAP</div>
         <div id="hud-best" class="hud-value small">--</div>
       </div>
+
+      <div class="hud-minimap"><canvas id="minimap" width="220" height="220"></canvas></div>
+      <div id="hud-feed" class="hud-feed"></div>
+
+      <div class="hud-panel hud-bottom-left">
+        <div class="hud-bar-label"><span>ARMOR</span><span id="hud-health-val">100</span></div>
+        <div class="hud-bar"><div id="hud-health" class="hud-bar-fill health"></div></div>
+        <div class="hud-bar-label"><span>TURBO</span><span class="hud-key">SHIFT</span></div>
+        <div class="hud-bar"><div id="hud-turbo" class="hud-bar-fill turbo"></div></div>
+        <div class="hud-ammo">
+          <div><span class="hud-key">J</span> GUN <b id="hud-ammo">0</b></div>
+          <div><span class="hud-key">K</span> MINES <b id="hud-mines">0</b></div>
+        </div>
+      </div>
+
       <div class="hud-panel hud-bottom-right">
         <div id="hud-speed" class="hud-speed">0</div>
         <div class="hud-label">KM/H</div>
       </div>
-      <div class="hud-help">
-        WASD / Arrows: drive &nbsp;·&nbsp; Space: handbrake &nbsp;·&nbsp; R: reset car &nbsp;·&nbsp; C: camera mode
+
+      <div id="hud-banner" class="hud-banner"></div>
+    </div>
+
+    <!-- Main menu -->
+    <div id="menu" class="screen">
+      <div class="menu-box">
+        <h1 class="logo">DEATH RALLY<span>3D</span></h1>
+        <div class="menu-sub">Race. Shoot. Survive.</div>
+        <button class="btn primary" data-action="start">START RACE</button>
+        <div class="options">
+          <div class="option" data-option="laps"><span>LAPS</span><button class="opt-btn" data-dir="-1">&lsaquo;</button><b data-value></b><button class="opt-btn" data-dir="1">&rsaquo;</button></div>
+          <div class="option" data-option="opponents"><span>RIVALS</span><button class="opt-btn" data-dir="-1">&lsaquo;</button><b data-value></b><button class="opt-btn" data-dir="1">&rsaquo;</button></div>
+          <div class="option" data-option="difficulty"><span>DIFFICULTY</span><button class="opt-btn" data-dir="-1">&lsaquo;</button><b data-value></b><button class="opt-btn" data-dir="1">&rsaquo;</button></div>
+          <div class="option" data-option="sound"><span>SOUND</span><button class="opt-btn" data-dir="-1">&lsaquo;</button><b data-value></b><button class="opt-btn" data-dir="1">&rsaquo;</button></div>
+        </div>
+        <button class="btn" data-action="controls">CONTROLS</button>
+        <div class="menu-hint">Press <b>ENTER</b> to start</div>
       </div>
     </div>
+
+    <div id="controls" class="screen hidden">
+      <div class="menu-box">
+        <h2>CONTROLS</h2>
+        <table class="controls-table">
+          <tr><td>Accelerate / Brake</td><td><span class="hud-key">W</span> <span class="hud-key">S</span> or <span class="hud-key">&uarr;</span> <span class="hud-key">&darr;</span></td></tr>
+          <tr><td>Steer</td><td><span class="hud-key">A</span> <span class="hud-key">D</span> or <span class="hud-key">&larr;</span> <span class="hud-key">&rarr;</span></td></tr>
+          <tr><td>Handbrake / drift</td><td><span class="hud-key">SPACE</span></td></tr>
+          <tr><td>Machine gun</td><td><span class="hud-key">J</span> or <span class="hud-key">Z</span></td></tr>
+          <tr><td>Drop mine</td><td><span class="hud-key">K</span> or <span class="hud-key">X</span></td></tr>
+          <tr><td>Turbo</td><td><span class="hud-key">SHIFT</span> or <span class="hud-key">L</span></td></tr>
+          <tr><td>Reset car</td><td><span class="hud-key">R</span></td></tr>
+          <tr><td>Camera mode</td><td><span class="hud-key">C</span></td></tr>
+          <tr><td>Pause</td><td><span class="hud-key">ESC</span> or <span class="hud-key">P</span></td></tr>
+        </table>
+        <div class="pickup-legend">
+          <div><i class="dot repair"></i>Repair</div>
+          <div><i class="dot ammo"></i>Ammo</div>
+          <div><i class="dot turbo"></i>Turbo</div>
+          <div><i class="dot mines"></i>Mines</div>
+        </div>
+        <button class="btn" data-action="back">BACK</button>
+      </div>
+    </div>
+
+    <div id="pause" class="screen hidden">
+      <div class="menu-box">
+        <h2>PAUSED</h2>
+        <button class="btn primary" data-action="resume">RESUME</button>
+        <button class="btn" data-action="restart">RESTART RACE</button>
+        <button class="btn" data-action="quit">MAIN MENU</button>
+      </div>
+    </div>
+
+    <div id="results" class="screen hidden">
+      <div class="menu-box wide">
+        <h2 id="results-title">RESULTS</h2>
+        <table class="results-table">
+          <thead><tr><th>#</th><th>DRIVER</th><th>TIME</th><th>BEST LAP</th><th>KILLS</th><th>WRECKS</th></tr></thead>
+          <tbody id="results-body"></tbody>
+        </table>
+        <button class="btn primary" data-action="restart">RACE AGAIN</button>
+        <button class="btn" data-action="quit">MAIN MENU</button>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
