@@ -101,6 +101,7 @@ export class Game {
     this.setRace({ laps: 99, opponents: 6, difficulty: 'hard', withPlayer: false });
     this.hud.setVisible(false);
     this.menu.show('menu');
+    this.sound.playMusic('menu-theme');
   }
 
   private startRace(config: RaceConfig): void {
@@ -110,6 +111,7 @@ export class Game {
     this.setRace(config);
     this.hud.setVisible(true);
     this.menu.show(null);
+    this.sound.playMusic('race-theme');
   }
 
   private onMenuAction(action: MenuAction): void {
