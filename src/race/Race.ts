@@ -414,7 +414,8 @@ export class Race {
     if (p) {
       const cmd = this.inputs.get(p) ?? NEUTRAL_INPUT;
       const ratio = Math.min(1, Math.abs(p.car.physics.forwardSpeed) / p.car.physics.spec.maxSpeed);
-      this.sound.updateEngine(ratio, p.destroyed ? 0 : cmd.throttle, cmd.boost);
+      const skidding = !p.destroyed && p.car.isSkidding(cmd) && !p.car.onGravel;
+      this.sound.updateEngine(ratio, p.destroyed ? 0 : cmd.throttle, cmd.boost, skidding);
     }
   }
 
