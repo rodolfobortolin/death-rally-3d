@@ -1,0 +1,90 @@
+{
+  "sfx": [
+    {
+      "id": "engine-loop",
+      "prompt": "Gritty V8 muscle car engine idling at steady mid RPM, close mic, rough rumbling exhaust, seamless loop, no revving, no background noise",
+      "duration": 4,
+      "loop": true,
+      "influence": 0.6
+    },
+    {
+      "id": "skid",
+      "prompt": "Car tires screeching and skidding on asphalt during a hard drift, sustained squeal, seamless loop",
+      "duration": 3,
+      "loop": true,
+      "influence": 0.6
+    },
+    {
+      "id": "collision",
+      "prompt": "Violent metal car crash impact, heavy steel crunch with glass shards, short and punchy",
+      "duration": 1.2,
+      "influence": 0.7
+    },
+    {
+      "id": "machine-gun",
+      "prompt": "Single short burst of a mounted heavy machine gun, three fast rounds, dry and punchy, no echo",
+      "duration": 0.8,
+      "influence": 0.7
+    },
+    {
+      "id": "mine-explosion",
+      "prompt": "Landmine explosion under a car, deep boom with metal debris and short rumble tail",
+      "duration": 2,
+      "influence": 0.7
+    },
+    {
+      "id": "mine-drop",
+      "prompt": "Heavy metal landmine dropped onto asphalt, clank followed by a short electronic arming beep",
+      "duration": 0.8,
+      "influence": 0.7
+    },
+    {
+      "id": "turbo",
+      "prompt": "Nitro turbo boost activation on a race car, sharp hiss whoosh with roaring engine surge",
+      "duration": 1.5,
+      "influence": 0.6
+    },
+    {
+      "id": "powerup",
+      "prompt": "Arcade video game power-up pickup sound, bright rising synth chime, retro 90s style",
+      "duration": 0.8,
+      "influence": 0.7
+    },
+    {
+      "id": "menu-click",
+      "prompt": "Short mechanical UI button click, metallic, crisp, retro game menu",
+      "duration": 0.5,
+      "influence": 0.8
+    },
+    {
+      "id": "countdown-beep",
+      "prompt": "Single short race start countdown beep, low pitched electronic tone, arcade racing game",
+      "duration": 0.5,
+      "influence": 0.8
+    },
+    {
+      "id": "countdown-go",
+      "prompt": "Race start GO signal, single high pitched long electronic beep, arcade racing game",
+      "duration": 0.8,
+      "influence": 0.8
+    },
+    {
+      "id": "car-destroyed",
+      "prompt": "Car exploding into flames, big fireball blast with metal parts flying and burning crackle",
+      "duration": 2.5,
+      "influence": 0.7
+    }
+  ],
+  "music": [
+    {
+      "id": "menu-theme",
+      "prompt": "Instrumental 90s industrial metal for a racing game menu, mid tempo 100 BPM, heavy distorted downtuned guitar riff, pounding drums, gritty synth bass, dark post-apocalyptic mood, loopable, no vocals",
+      "lengthMs": 90000
+    },
+    {
+      "id": "race-theme",
+      "prompt": "Instrumental high energy heavy rock and industrial metal for a violent car combat race, fast tempo 150 BPM, aggressive palm muted guitar riffs, double kick drums, driving bass, adrenaline, 90s DOS game soundtrack vibe, loopable, no vocals",
+      "lengthMs": 120000
+    }
+  ]
+}
