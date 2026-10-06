@@ -5,6 +5,8 @@ import { Race, type RaceConfig } from '../race/Race';
 import { Hud } from '../ui/Hud';
 import { Menu, type MenuAction } from '../ui/Menu';
 import { Minimap } from '../ui/Minimap';
+import { renderCarPortrait } from '../ui/Portraits';
+import { Standings } from '../ui/Standings';
 import { Environment } from '../world/Environment';
 import { Track } from '../world/Track';
 import { FollowCamera } from './FollowCamera';
@@ -29,6 +31,7 @@ export class Game {
   private readonly hud = new Hud();
   private readonly menu = new Menu();
   private readonly minimap: Minimap;
+  private readonly standings = new Standings();
   private readonly timer = new THREE.Timer();
   private race: Race | null = null;
   private lastConfig: RaceConfig | null = null;
@@ -91,6 +94,10 @@ export class Game {
     };
     this.race = race;
     this.scene.add(race.group);
+    if (config.withPlayer) {
+      const portraits = new Map(race.racers.map((r) => [r, renderCarPortrait(this.renderer.webgl, r.car.object, this.scene.environment)] as const));
+      this.standings.build(race, portraits);
+    }
     const f = race.focus.car.physics;
     this.cameraRig.snapTo(f.x, f.z, f.heading);
   }
@@ -202,6 +209,7 @@ export class Game {
       if (this.state === 'racing') {
         this.hud.update(race);
         this.minimap.draw(race);
+        this.standings.update(race);
       }
     }
 

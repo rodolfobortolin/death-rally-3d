@@ -11,9 +11,11 @@ const GUN_SPREAD = 0.035;
 const CAR_HIT_RADIUS = 1.15;
 const CAR_HIT_OFFSET = 1.1;
 
-const MINE_ARM_TIME = 0.6;
-const MINE_OWNER_GRACE = 2;
-const MINE_TRIGGER_RADIUS = 1.9;
+/** Mines are live for everyone except their owner the moment they touch the ground. */
+const MINE_ARM_TIME = 0.05;
+const MINE_OWNER_GRACE = 1.5;
+/** Mine radius added to the car's hit circles when checking contact. */
+const MINE_TRIGGER_RADIUS = 0.6;
 const MINE_BLAST_RADIUS = 6;
 const MINE_DAMAGE = 32;
 const MINE_COOLDOWN = 0.6;
@@ -131,8 +133,9 @@ export class Combat {
     owner.mineCooldown = MINE_COOLDOWN;
     const p = owner.car.physics;
     const [fx, fz] = p.forward();
-    const x = p.x - fx * 3;
-    const z = p.z - fz * 3;
+    // Drop it just behind the rear bumper so a close follower runs straight into it.
+    const x = p.x - fx * 2.7;
+    const z = p.z - fz * 2.7;
 
     const mesh = new THREE.Group();
     const body = new THREE.Mesh(this.mineBody, this.mineBodyMat);
@@ -161,13 +164,15 @@ export class Combat {
     this.removeMine(index);
     this.effects.explosion(pos, 1);
     this.sound.explosion(pos, 1);
-    this.blast(pos, MINE_BLAST_RADIUS, MINE_DAMAGE, mine.owner, 14);
+    // A fresh mine never hurts the car that just dropped it.
+    const spared = mine.age < MINE_OWNER_GRACE ? mine.owner : null;
+    this.blast(pos, MINE_BLAST_RADIUS, MINE_DAMAGE, mine.owner, 14, spared);
   }
 
   /** Radial damage and knock-back with linear falloff. */
-  private blast(pos: THREE.Vector3, radius: number, damage: number, source: Racer | null, push: number): void {
+  private blast(pos: THREE.Vector3, radius: number, damage: number, source: Racer | null, push: number, spared: Racer | null = null): void {
     for (const r of this.racers) {
-      if (r.destroyed) continue;
+      if (r.destroyed || r === spared) continue;
       const p = r.car.physics;
       const dx = p.x - pos.x;
       const dz = p.z - pos.z;
@@ -237,13 +242,22 @@ export class Combat {
       for (const r of this.racers) {
         if (r.destroyed) continue;
         if (r === m.owner && m.age < MINE_OWNER_GRACE) continue;
-        const p = r.car.physics;
-        if ((p.x - m.x) ** 2 + (p.z - m.z) ** 2 < MINE_TRIGGER_RADIUS ** 2) {
+        if (this.touchesCar(r, m.x, m.z, MINE_TRIGGER_RADIUS + CAR_HIT_RADIUS)) {
           this.detonate(i);
           break;
         }
       }
     }
+  }
+
+  /** True if a point is within `radius` of the front or rear hit circle of a car. */
+  private touchesCar(r: Racer, x: number, z: number, radius: number): boolean {
+    const p = r.car.physics;
+    const [fx, fz] = p.forward();
+    for (const off of [CAR_HIT_OFFSET, -CAR_HIT_OFFSET]) {
+      if ((p.x + fx * off - x) ** 2 + (p.z + fz * off - z) ** 2 < radius * radius) return true;
+    }
+    return false;
   }
 
   dispose(): void {

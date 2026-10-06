@@ -70,6 +70,22 @@ body { font-family: var(--ui); color: #fff; }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
 }
 
+.hud-standings { position: absolute; left: 16px; top: 206px; width: 230px; display: flex; flex-direction: column; gap: 4px; }
+.standing {
+  display: grid; grid-template-columns: 18px 60px 1fr; gap: 8px; align-items: center;
+  padding: 3px 8px 3px 6px; border-radius: 5px; background: rgba(10, 8, 6, 0.7);
+  border-left: 3px solid var(--car-color, #888); transition: transform 0.25s;
+}
+.standing.me { background: rgba(80, 40, 10, 0.75); box-shadow: 0 0 0 1px rgba(255, 170, 40, 0.5); }
+.standing-rank { font-family: var(--display); font-size: 18px; text-align: center; }
+.standing img { width: 60px; height: 36px; border-radius: 3px; display: block; object-fit: cover; }
+.standing-name { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; line-height: 1.1; }
+.standing-name small { color: #bbb; font-size: 12px; }
+.standing .hud-bar { height: 7px; margin: 4px 0 0; }
+.standing .hud-bar-fill { transition: width 0.2s linear, background-color 0.2s; }
+.standing.wrecked img { filter: grayscale(1) brightness(0.45); }
+.standing.wrecked .standing-name small { color: #ff5a3a; }
+
 /* ---------------- Menus ---------------- */
 .screen {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -117,7 +133,12 @@ h2 { font-family: var(--display); font-weight: 400; font-size: 40px; color: var(
 .dot { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .dot.repair { background: #40ff70; } .dot.ammo { background: #ffc830; } .dot.turbo { background: #40a0ff; } .dot.mines { background: #ff4030; }
 
+@media (max-height: 640px) {
+  .standing img { width: 44px; height: 26px; }
+  .standing { grid-template-columns: 18px 44px 1fr; }
+}
 @media (max-width: 760px) {
+  .hud-standings { display: none; }
   .hud-minimap { width: 140px; height: 140px; }
   .hud-feed { top: 166px; }
   .hud-banner { font-size: 56px; }
