@@ -1,4 +1,5 @@
 import { CARS, carById, DEFAULT_CAR_ID, effectiveStats, FULL_UPGRADES, TIER_NAMES, type CarStats } from '../car/CarCatalog';
+import type { GraphicsQuality } from '../core/Renderer';
 import type { Difficulty, RaceConfig, RaceResult } from '../race/Race';
 import { formatTime } from './Hud';
 
@@ -12,6 +13,7 @@ export interface Settings {
   sound: boolean;
   respawn: boolean;
   car: string;
+  graphics: GraphicsQuality;
 }
 
 const OPTIONS = {
@@ -20,6 +22,7 @@ const OPTIONS = {
   difficulty: ['easy', 'normal', 'hard'] as Difficulty[],
   sound: [true, false],
   respawn: [false, true],
+  graphics: ['low', 'medium', 'high'] as GraphicsQuality[],
   car: CARS.map((c) => c.id),
 };
 
@@ -33,7 +36,7 @@ const STAT_LABELS: Array<[keyof CarStats, string]> = [
 const STORAGE_KEY = 'death-rally-3d.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true, respawn: false, car: DEFAULT_CAR_ID };
+  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true, respawn: false, car: DEFAULT_CAR_ID, graphics: 'medium' };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return { ...defaults, ...(JSON.parse(raw) as Partial<Settings>) };

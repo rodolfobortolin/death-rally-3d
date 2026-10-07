@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeStatic } from './mergeStatic';
 
 /**
  * Visual representation of a car. Models are built procedurally, but anything
@@ -504,20 +505,28 @@ export function createCarModel(options: CarModelOptions): CarVisual {
   root.add(body);
   const mats = createMaterials(options);
   const build = BUILDERS[options.bodyType ?? 'muscle'](body, mats, options);
+  // Bake the rigid body into one mesh per material (loose parts stay separate so they can
+  // hang and fall off). This takes a car from ~100 draw calls to a few dozen.
+  mergeStatic(body, build.loose);
+  for (const part of build.loose) mergeStatic(part);
   // Paint uses vertex colors for damage grime, so every painted mesh must be a damage panel
   // (meshes without a color attribute would render black).
   mats.paint.vertexColors = true;
+  build.panels.length = 0;
   body.traverse((o) => {
-    if (o instanceof THREE.Mesh && o.material === mats.paint && !build.panels.includes(o)) build.panels.push(o);
+    if (o instanceof THREE.Mesh && o.material === mats.paint) build.panels.push(o);
   });
 
   const wheels: THREE.Object3D[] = [];
   const frontWheelPivots: THREE.Object3D[] = [];
+  // All four wheels share one baked wheel (tire and tread blocks, rim, hub).
+  const wheelTemplate = createWheel(build.wheelRadius, build.wheelWidth, mats);
+  mergeStatic(wheelTemplate);
   for (const z of [build.axleZ, -build.axleZ]) {
     for (const x of [-build.wheelX, build.wheelX]) {
       const pivot = new THREE.Group();
       pivot.position.set(x, build.wheelRadius, z);
-      const wheel = createWheel(build.wheelRadius, build.wheelWidth, mats);
+      const wheel = wheelTemplate.clone();
       pivot.add(wheel);
       root.add(pivot);
       wheels.push(wheel);

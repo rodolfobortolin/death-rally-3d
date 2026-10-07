@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeByCell } from '../car/mergeStatic';
 import { createRng } from '../core/math';
 import type { Track } from './Track';
 import { createConcreteTexture, createCorrugatedTexture, createFacadeTextures, createGroundTextures } from './textures';
@@ -28,6 +29,23 @@ export class Environment {
     this.buildLampPosts();
     this.buildTrees();
     this.buildRocks();
+    // The scenery never moves: bake it into a few meshes per area to save draw calls.
+    mergeByCell(this.group, 100);
+  }
+
+  /** Shadow resolution and coverage: smaller maps cover a tighter area around the car. */
+  setShadowQuality(quality: 'low' | 'medium' | 'high'): void {
+    const [mapSize, extent] = quality === 'high' ? [4096, 110] : quality === 'medium' ? [2048, 75] : [1024, 60];
+    const shadow = this.sun.shadow;
+    if (shadow.mapSize.x !== mapSize) {
+      shadow.mapSize.set(mapSize, mapSize);
+      shadow.map?.dispose();
+      shadow.map = null; // reallocated at the new size on the next render
+    }
+    const cam = shadow.camera;
+    cam.left = cam.bottom = -extent;
+    cam.right = cam.top = extent;
+    cam.updateProjectionMatrix();
   }
 
   /** Keeps the shadow frustum centered on the player so shadows stay sharp. */

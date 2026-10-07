@@ -66,8 +66,12 @@ export class Game {
       this.sound.unlock();
       this.sound.uiClick();
     };
-    this.menu.onSettingsChange = (s) => this.sound.setMuted(!s.sound);
+    this.menu.onSettingsChange = (s) => {
+      this.sound.setMuted(!s.sound);
+      this.applyGraphics();
+    };
     this.sound.setMuted(!this.menu.settings.sound);
+    this.applyGraphics();
     window.addEventListener('keydown', () => this.sound.unlock(), { once: true });
 
     window.addEventListener('resize', () => this.onResize());
@@ -183,6 +187,13 @@ export class Game {
       this.state = 'racing';
       this.menu.show(null);
     }
+  }
+
+  private applyGraphics(): void {
+    const quality = this.menu.settings.graphics;
+    this.renderer.setQuality(quality);
+    this.environment.setShadowQuality(quality);
+    this.onResize();
   }
 
   private onResize(): void {

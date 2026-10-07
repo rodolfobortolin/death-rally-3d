@@ -29,6 +29,8 @@ Open http://localhost:5173 in your browser.
 | F | Show / hide the FPS counter |
 | Esc / P | Pause |
 
+If the game runs below 60 FPS, set **GRAPHICS** to LOW in the menu (MEDIUM is the default; HIGH renders at full Retina resolution with 4K shadows).
+
 ## Gameplay
 
 - Race against up to 7 AI rivals over 1 to 8 laps, on easy, normal or hard.
