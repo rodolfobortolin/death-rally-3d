@@ -31,7 +31,7 @@ Open http://localhost:5173 in your browser.
 ## Gameplay
 
 - Race against up to 7 AI rivals over 1 to 8 laps, on easy, normal or hard.
-- Pick your car in the menu: **Vagabond** (nimble buggy), **Dervish** (balanced muscle car), **Sentinel** (armored pickup) or **Shrieker** (fastest, fragile). Each has its own top speed, acceleration, handling and armor ratings (`src/car/CarCatalog.ts`), ready for engine, tire and armor upgrades.
+- Pick your car in the menu. Cars come in tiers, from the **Vagabond** starter buggy (tier 1) through the **Dervish** muscle car and the armored **Sentinel** pickup up to the **Shrieker** supercar (tier 4). Each has top speed, acceleration, handling and armor ratings (`src/car/CarCatalog.ts`). Engine, tire and armor upgrades add at most 8 rating points, about one tier: a maxed car roughly matches the next tier stock and never catches a car two tiers up. Rivals race in the same class as your car.
 - Every car has armor, a hood-mounted machine gun, mines and a turbo tank.
 - Wrecked cars explode, damage anything nearby and are out of the race, left burning on the track as obstacles; whoever caused it gets the kill. If you get wrecked, the race is over for you. Turn on RESPAWN in the menu to bring wrecks back after a few seconds instead.
 - Floating crates on the track refill **repair** (green), **ammo** (yellow), **turbo** (blue) and **mines** (red).

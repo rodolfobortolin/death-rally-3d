@@ -1,4 +1,4 @@
-import { CARS, carById, DEFAULT_CAR_ID, effectiveStats, type CarStats } from '../car/CarCatalog';
+import { CARS, carById, DEFAULT_CAR_ID, effectiveStats, FULL_UPGRADES, TIER_NAMES, type CarStats } from '../car/CarCatalog';
 import type { Difficulty, RaceConfig, RaceResult } from '../race/Race';
 import { formatTime } from './Hud';
 
@@ -140,13 +140,16 @@ export class Menu {
   private renderGarage(): void {
     const def = carById(this.settings.car);
     const stats = effectiveStats(def);
+    const maxed = effectiveStats(def, FULL_UPGRADES);
     const img = document.getElementById('garage-img') as HTMLImageElement;
     const src = this.carPreviews.get(def.id);
     if (src) img.src = src;
     document.getElementById('garage-name')!.textContent = def.name.toUpperCase();
+    document.getElementById('garage-tier')!.textContent = `TIER ${def.tier} · ${TIER_NAMES[def.tier]} · $${def.price.toLocaleString('en-US')}`;
     document.getElementById('garage-tag')!.textContent = def.tagline;
     document.getElementById('garage-stats')!.innerHTML = STAT_LABELS.map(([key, text]) => {
-      const cells = Array.from({ length: 10 }, (_, i) => `<i class="${i < Math.round(stats[key]) ? 'on' : ''}"></i>`).join('');
+      // Filled = stock, outlined = what fully upgrading this car can reach.
+      const cells = Array.from({ length: 10 }, (_, i) => `<i class="${i < stats[key] ? 'on' : i < maxed[key] ? 'up' : ''}"></i>`).join('');
       return `<div class="stat"><span>${text}</span><div class="stat-bar">${cells}</div></div>`;
     }).join('');
     document.getElementById('garage-dots')!.innerHTML = CARS.map((c) => `<i class="${c.id === def.id ? 'on' : ''}"></i>`).join('');

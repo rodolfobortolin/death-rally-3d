@@ -1,3 +1,4 @@
+import { DEFAULT_CAR_SPEC } from '../car/CarPhysics';
 import { NEUTRAL_INPUT, type DriveInput } from '../core/Input';
 import { clamp } from '../core/math';
 import type { Mine } from '../combat/Combat';
@@ -103,7 +104,8 @@ export class AIDriver {
     const scan = Math.round((12 + speed * 1.4) / (track.length / n));
     let maxCurv = 0;
     for (let k = 2; k < scan; k++) maxCurv = Math.max(maxCurv, Math.abs(track.samples[(car.trackIndex + k) % n].curvature));
-    const grip = 19 + 6 * skill;
+    // Better tires let the car carry more speed through corners.
+    const grip = (19 + 6 * skill) * (p.spec.grip / DEFAULT_CAR_SPEC.grip);
     let targetSpeed = Math.min(p.spec.maxSpeed * 1.3, Math.sqrt(grip / Math.max(maxCurv, 1e-4)));
     targetSpeed *= 0.86 + 0.14 * skill;
 

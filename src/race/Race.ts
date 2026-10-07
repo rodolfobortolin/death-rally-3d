@@ -113,19 +113,23 @@ export class Race {
     };
 
     // Build the field: rivals first, the player starts from the back like the original.
+    // Rivals race in the same class as the player's car (stock, without upgrades), so
+    // upgrades are the player's edge and a better car means a tougher field.
+    const playerCar = carById(config.car);
+    const fieldSpec = config.withPlayer ? buildCar(playerCar).spec : DEFAULT_CAR_SPEC;
     const [minSkill, maxSkill] = SKILL[config.difficulty];
     const rivals = [...RIVALS].sort(() => Math.random() - 0.5).slice(0, config.opponents);
     rivals.forEach((rival, i) => {
       const skill = maxSkill - (i / Math.max(1, rivals.length - 1)) * (maxSkill - minSkill);
-      const spec: CarSpec = { ...DEFAULT_CAR_SPEC, maxSpeed: DEFAULT_CAR_SPEC.maxSpeed * (0.93 + 0.1 * skill) };
+      const spec: CarSpec = { ...fieldSpec, maxSpeed: fieldSpec.maxSpeed * (0.93 + 0.1 * skill) };
       const racer = new Racer({ ...rival, isPlayer: false, skill }, track, spec, onWall);
       this.racers.push(racer);
       this.drivers.set(racer, new AIDriver(racer));
     });
     if (config.withPlayer) {
-      const def = carById(config.car);
-      const { spec, maxHealth } = buildCar(def, config.upgrades ?? STOCK_UPGRADES);
-      const profile: RacerProfile = { name: 'You', color: def.color, stripe: def.stripe, bodyType: def.bodyType, number: def.number, isPlayer: true, skill: 1 };
+      const { spec, maxHealth } = buildCar(playerCar, config.upgrades ?? STOCK_UPGRADES);
+      const p = playerCar;
+      const profile: RacerProfile = { name: 'You', color: p.color, stripe: p.stripe, bodyType: p.bodyType, number: p.number, isPlayer: true, skill: 1 };
       const player = new Racer(profile, track, spec, onWall, maxHealth);
       this.racers.push(player);
       this.player = player;
