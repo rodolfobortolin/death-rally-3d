@@ -30,6 +30,7 @@ Open http://localhost:5173 in your browser.
 | Esc / P | Pause |
 
 If the game runs below 60 FPS, set **GRAPHICS** to LOW in the menu (MEDIUM is the default; HIGH renders at full Retina resolution with 4K shadows).
+The game caps races at 60 FPS by default (FRAME CAP in the menu; 30 runs cooler, OFF follows the display refresh rate), draws the menu background at 30 FPS, stops drawing while paused and stops completely when the tab is hidden.
 
 ## Gameplay
 

@@ -14,6 +14,8 @@ export interface Settings {
   respawn: boolean;
   car: string;
   graphics: GraphicsQuality;
+  /** Frame rate limit during races; 0 = follow the display refresh rate. */
+  frameCap: number;
 }
 
 const OPTIONS = {
@@ -23,6 +25,7 @@ const OPTIONS = {
   sound: [true, false],
   respawn: [false, true],
   graphics: ['low', 'medium', 'high'] as GraphicsQuality[],
+  frameCap: [60, 30, 0],
   car: CARS.map((c) => c.id),
 };
 
@@ -36,7 +39,7 @@ const STAT_LABELS: Array<[keyof CarStats, string]> = [
 const STORAGE_KEY = 'death-rally-3d.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true, respawn: false, car: DEFAULT_CAR_ID, graphics: 'medium' };
+  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true, respawn: false, car: DEFAULT_CAR_ID, graphics: 'medium', frameCap: 60 };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return { ...defaults, ...(JSON.parse(raw) as Partial<Settings>) };
@@ -132,6 +135,7 @@ export class Menu {
     const label = (key: keyof Settings): string => {
       const v = this.settings[key];
       if (key === 'sound' || key === 'respawn') return v ? 'ON' : 'OFF';
+      if (key === 'frameCap') return v ? `${v} FPS` : 'OFF';
       return String(v).toUpperCase();
     };
     document.querySelectorAll<HTMLElement>('[data-option]').forEach((row) => {

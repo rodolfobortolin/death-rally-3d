@@ -20,6 +20,8 @@ import { Renderer } from './Renderer';
 
 const PHYSICS_STEP = 1 / 120;
 const MAX_FRAME_TIME = 0.1;
+/** The attract race behind the menus doesn't need a high frame rate. */
+const MENU_FPS = 30;
 
 type GameState = 'menu' | 'racing' | 'paused' | 'results';
 
@@ -50,6 +52,10 @@ export class Game {
   /** Width of the HUD sidebar, so the camera can center the car in the free area. */
   private hudInset = 0;
   private previewsPending = true;
+  /** Timestamp (ms) of the last frame actually rendered, for the frame cap. */
+  private lastFrameAt = 0;
+  /** Set when something changed while paused, so one fresh frame gets drawn. */
+  private needsRender = true;
 
   constructor(container: HTMLElement) {
     this.cameraRig = new FollowCamera(window.innerWidth / window.innerHeight);
@@ -100,7 +106,45 @@ export class Game {
   }
 
   start(): void {
-    this.renderer.webgl.setAnimationLoop(() => this.frame());
+    this.renderer.webgl.setAnimationLoop((t) => this.tick(t));
+    // Stop drawing entirely while the tab is hidden; pause a race left running.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (this.state === 'racing') this.togglePause();
+        this.renderer.webgl.setAnimationLoop(null);
+      } else {
+        this.timer.reset();
+        this.needsRender = true;
+        this.renderer.webgl.setAnimationLoop((t) => this.tick(t));
+      }
+    });
+  }
+
+  /** Frame-rate target for the current state (Infinity = uncapped, 0 = draw only when something changed). */
+  private targetFps(): number {
+    if (this.state === 'paused') return 0;
+    if (this.state === 'menu' || this.state === 'results') return Math.min(MENU_FPS, this.menu.settings.frameCap || MENU_FPS);
+    return this.menu.settings.frameCap || Infinity;
+  }
+
+  /** Animation loop entry: skips display refreshes beyond the frame cap (e.g. on 120 Hz screens). */
+  private tick(now: number): void {
+    const fps = this.targetFps();
+    if (fps === 0 && !this.needsRender) {
+      // Keep the input edge state fresh so Esc still unpauses.
+      this.handleGlobalKeys();
+      this.input.endFrame();
+      return;
+    }
+    if (fps > 0 && fps !== Infinity) {
+      const interval = 1000 / fps;
+      const since = now - this.lastFrameAt;
+      // Small tolerance so a 60 cap on a 60 Hz display never drops frames.
+      if (since < interval - 2) return;
+      this.lastFrameAt = since > interval * 2 ? now : this.lastFrameAt + interval;
+    }
+    this.needsRender = false;
+    this.frame();
   }
 
   // ---------------------------------------------------------------------------
@@ -179,11 +223,13 @@ export class Game {
   }
 
   private togglePause(): void {
+    this.needsRender = true;
     if (this.state === 'racing') {
       this.state = 'paused';
       this.sound.stopEngine();
       this.menu.show('pause');
     } else if (this.state === 'paused') {
+      this.timer.reset(); // don't feed the paused time into the next physics step
       this.state = 'racing';
       this.menu.show(null);
     }
@@ -197,6 +243,7 @@ export class Game {
   }
 
   private onResize(): void {
+    this.needsRender = true;
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.cameraRig.resize(w / h);
