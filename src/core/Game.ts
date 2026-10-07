@@ -5,6 +5,7 @@ import { CARS, DEFAULT_CAR_ID } from '../car/CarCatalog';
 import { CarDamage } from '../car/CarDamage';
 import { createCarModel } from '../car/CarModel';
 import { Race, type RaceConfig } from '../race/Race';
+import { FpsCounter } from '../ui/FpsCounter';
 import { Hud } from '../ui/Hud';
 import { Menu, type MenuAction } from '../ui/Menu';
 import { Minimap } from '../ui/Minimap';
@@ -33,6 +34,7 @@ export class Game {
   private readonly effects = new Effects();
   private readonly sound = new Sound();
   private readonly hud = new Hud();
+  private readonly fps = new FpsCounter();
   private readonly menu = new Menu();
   private readonly minimap: Minimap;
   private readonly standings = new Standings();
@@ -196,6 +198,7 @@ export class Game {
       // Buttons already react to Enter when focused; only start when nothing is focused.
       if (!(document.activeElement instanceof HTMLButtonElement)) this.onMenuAction('start');
     }
+    if (input.wasPressed('KeyF')) this.fps.toggle();
     if (input.wasPressed('Escape', 'KeyP')) {
       if (this.state === 'racing' || this.state === 'paused') this.togglePause();
       else if (this.menu.visible === 'controls') this.menu.show('menu');
@@ -209,7 +212,9 @@ export class Game {
 
   private frame(): void {
     this.timer.update();
-    const dt = Math.min(this.timer.getDelta(), MAX_FRAME_TIME);
+    const rawDt = this.timer.getDelta();
+    const dt = Math.min(rawDt, MAX_FRAME_TIME);
+    this.fps.update(rawDt);
     this.handleGlobalKeys();
 
     const race = this.race;

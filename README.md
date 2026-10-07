@@ -26,6 +26,7 @@ Open http://localhost:5173 in your browser.
 | Shift / L | Turbo |
 | R | Reset car to the track |
 | C | Toggle camera (classic north-up / rotating chase) |
+| F | Show / hide the FPS counter |
 | Esc / P | Pause |
 
 ## Gameplay

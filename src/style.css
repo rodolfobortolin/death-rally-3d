@@ -125,6 +125,15 @@ body { font-family: var(--ui); color: #fff; }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
 }
 
+/* ---------------- FPS counter ---------------- */
+.fps {
+  position: fixed; right: 12px; bottom: 10px; z-index: 50; pointer-events: none;
+  padding: 3px 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.6);
+  font: 700 13px/1.2 var(--ui); letter-spacing: 1px; font-variant-numeric: tabular-nums; color: #7dff8a;
+}
+.fps[data-level='ok'] { color: #ffd84a; }
+.fps[data-level='bad'] { color: #ff5a4a; }
+
 /* ---------------- Menus ---------------- */
 .screen {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
