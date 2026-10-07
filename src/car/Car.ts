@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { DriveInput } from '../core/Input';
 import type { Track } from '../world/Track';
+import { CarDamage } from './CarDamage';
 import { CAR_DIMENSIONS, createCarModel, type CarModelOptions, type CarVisual } from './CarModel';
 import { CarPhysics, DEFAULT_CAR_SPEC, type CarSpec } from './CarPhysics';
 
@@ -13,6 +14,7 @@ export interface CarEvents {
 export class Car {
   readonly physics: CarPhysics;
   readonly visual: CarVisual;
+  readonly damage: CarDamage;
   trackIndex = -1;
   trackLateral = 0;
   trackAlong = 0;
@@ -31,6 +33,7 @@ export class Car {
   ) {
     this.physics = new CarPhysics({ ...spec });
     this.visual = createCarModel(model);
+    this.damage = new CarDamage(this.visual, Math.floor(Math.random() * 1e9));
   }
 
   get object(): THREE.Group {
@@ -125,7 +128,7 @@ export class Car {
       this.bodyRoll += (targetRoll - this.bodyRoll) * Math.min(1, dt * 8);
       this.bodyPitch += (targetPitch - this.bodyPitch) * Math.min(1, dt * 6);
     }
-    const body = v.root.children[0];
+    const body = v.body;
     body.rotation.z = this.bodyRoll;
     body.rotation.x = this.bodyPitch;
 

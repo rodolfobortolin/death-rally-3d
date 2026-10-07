@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Car } from '../car/Car';
+import type { CarBodyType } from '../car/CarModel';
 import type { CarSpec } from '../car/CarPhysics';
 import type { Track } from '../world/Track';
 
@@ -7,6 +8,8 @@ export interface RacerProfile {
   name: string;
   color: number;
   stripe: number;
+  bodyType: CarBodyType;
+  number: number;
   isPlayer: boolean;
   /** 0..1+, scales AI top speed, aim and aggression. Ignored for the player. */
   skill: number;
@@ -47,18 +50,15 @@ export class Racer {
   finishTime = 0;
   rank = 0;
 
-  private readonly paintColor: THREE.Color;
-
   constructor(
     readonly profile: RacerProfile,
     track: Track,
     spec: CarSpec,
     onWallImpact: (racer: Racer, x: number, y: number, z: number, strength: number) => void,
   ) {
-    this.car = new Car(track, { bodyColor: profile.color, stripeColor: profile.stripe }, spec, {
+    this.car = new Car(track, { bodyColor: profile.color, stripeColor: profile.stripe, bodyType: profile.bodyType, number: profile.number }, spec, {
       onImpact: (x, y, z, s) => onWallImpact(this, x, y, z, s),
     });
-    this.paintColor = new THREE.Color(profile.color);
   }
 
   get name(): string {
@@ -75,17 +75,9 @@ export class Racer {
     return this.lapsDone * trackLength + this.car.trackAlong;
   }
 
-  setWrecked(wrecked: boolean): void {
-    const paint = this.car.visual.paintMaterial;
-    if (wrecked) {
-      paint.color.set(0x1a1612);
-      paint.clearcoat = 0.05; // keep > 0 so the shader variant doesn't change
-      paint.roughness = 0.95;
-    } else {
-      paint.color.copy(this.paintColor);
-      paint.clearcoat = 1;
-      paint.roughness = 0.38;
-    }
+  /** Refreshes dents, loose parts and paint from the current armor. */
+  updateDamageVisual(): void {
+    this.car.damage.apply(this.destroyed ? 1 : 1 - this.health / MAX_HEALTH, this.destroyed);
   }
 
   repair(): void {
@@ -93,7 +85,6 @@ export class Racer {
     this.destroyed = false;
     this.invulnerable = 2;
     this.lastAttacker = null;
-    this.setWrecked(false);
   }
 
   worldPoint(local: THREE.Vector3, out = new THREE.Vector3()): THREE.Vector3 {

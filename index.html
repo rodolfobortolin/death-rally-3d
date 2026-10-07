@@ -14,44 +14,35 @@
 
     <!-- In-race HUD -->
     <div id="hud" class="hidden">
-      <div class="hud-panel hud-top-left">
-        <div class="hud-row">
-          <div>
-            <div class="hud-label">POS</div>
-            <div class="hud-pos"><span id="hud-pos">1</span><small>/<span id="hud-total">6</span></small></div>
+      <aside class="sidebar">
+        <section class="card player-card">
+          <header class="card-head">YOU</header>
+          <div class="gauge-wrap">
+            <canvas id="hud-gauge" width="200" height="104"></canvas>
+            <div class="gauge-readout"><b id="hud-speed">0</b><small>KM/H</small></div>
           </div>
-          <div>
-            <div class="hud-label">LAP</div>
-            <div class="hud-lap"><span id="hud-lap">1</span><small>/<span id="hud-laps">3</span></small></div>
+          <div class="turbo-row"><span>E</span><div class="hud-bar"><div id="hud-turbo" class="hud-bar-fill turbo"></div></div><span>F</span></div>
+          <div class="portrait">
+            <img id="hud-portrait" alt="Your car" />
+            <div id="hud-damage-tint" class="damage-tint"></div>
+            <div class="damage-label">DAMAGE <b id="hud-damage">0%</b></div>
           </div>
-        </div>
-        <div class="hud-label">TIME</div>
-        <div id="hud-time" class="hud-value">0:00.000</div>
-        <div class="hud-label">BEST LAP</div>
-        <div id="hud-best" class="hud-value small">--</div>
-      </div>
-
-      <div id="hud-standings" class="hud-standings"></div>
+          <div class="card-row">
+            <div class="lap-box"><small>LAP</small><b><span id="hud-lap">1</span><i> OF </i><span id="hud-laps">3</span></b></div>
+            <div class="pos-box" id="hud-pos">6th</div>
+          </div>
+          <div class="ammo-row">
+            <div><span class="hud-key">J</span> GUN <b id="hud-ammo">0</b></div>
+            <div><span class="hud-key">K</span> MINES <b id="hud-mines">0</b></div>
+          </div>
+          <div class="time-row"><span>TIME <b id="hud-time">0:00.000</b></span><span>BEST <b id="hud-best">--</b></span></div>
+        </section>
+        <div id="hud-rivals" class="rivals"></div>
+      </aside>
 
       <div class="hud-minimap"><canvas id="minimap" width="220" height="220"></canvas></div>
       <div id="hud-feed" class="hud-feed"></div>
-
-      <div class="hud-panel hud-bottom-left">
-        <div class="hud-bar-label"><span>ARMOR</span><span id="hud-health-val">100</span></div>
-        <div class="hud-bar"><div id="hud-health" class="hud-bar-fill health"></div></div>
-        <div class="hud-bar-label"><span>TURBO</span><span class="hud-key">SHIFT</span></div>
-        <div class="hud-bar"><div id="hud-turbo" class="hud-bar-fill turbo"></div></div>
-        <div class="hud-ammo">
-          <div><span class="hud-key">J</span> GUN <b id="hud-ammo">0</b></div>
-          <div><span class="hud-key">K</span> MINES <b id="hud-mines">0</b></div>
-        </div>
-      </div>
-
-      <div class="hud-panel hud-bottom-right">
-        <div id="hud-speed" class="hud-speed">0</div>
-        <div class="hud-label">KM/H</div>
-      </div>
-
+      <div id="hud-tags" class="tags"></div>
       <div id="hud-banner" class="hud-banner"></div>
     </div>
 

@@ -202,7 +202,6 @@ export class Combat {
     victim.destroyed = true;
     victim.wrecks++;
     victim.respawnTimer = 3;
-    victim.setWrecked(true);
     const killer = victim.lastAttacker;
     if (killer) killer.kills++;
     const p = victim.car.physics;

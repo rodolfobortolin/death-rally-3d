@@ -47,13 +47,13 @@ const CAR_RADIUS = 1.05;
 const CAR_CIRCLE_OFFSET = 1.1;
 
 const RIVALS: Array<Omit<RacerProfile, 'isPlayer' | 'skill'>> = [
-  { name: 'Viper', color: 0x2f8a3a, stripe: 0x111111 },
-  { name: 'Razor', color: 0x1f4fa8, stripe: 0xf2f2f2 },
-  { name: 'Sledge', color: 0xd8a51c, stripe: 0x111111 },
-  { name: 'Mad Dog', color: 0x6a2a8a, stripe: 0xe8c040 },
-  { name: 'Bones', color: 0xe6e2da, stripe: 0x1a1a1a },
-  { name: 'Cinder', color: 0xd85a10, stripe: 0x222222 },
-  { name: 'Ghost', color: 0x4a5058, stripe: 0xd02020 },
+  { name: 'Viper', color: 0x2f8a3a, stripe: 0x111111, bodyType: 'buggy', number: 7 },
+  { name: 'Razor', color: 0x1f4fa8, stripe: 0xf2f2f2, bodyType: 'muscle', number: 23 },
+  { name: 'Sledge', color: 0xd8a51c, stripe: 0x111111, bodyType: 'pickup', number: 4 },
+  { name: 'Mad Dog', color: 0x6a2a8a, stripe: 0xe8c040, bodyType: 'muscle', number: 66 },
+  { name: 'Bones', color: 0xe6e2da, stripe: 0x1a1a1a, bodyType: 'buggy', number: 13 },
+  { name: 'Cinder', color: 0xd85a10, stripe: 0x222222, bodyType: 'pickup', number: 9 },
+  { name: 'Ghost', color: 0x2e4a44, stripe: 0xd02020, bodyType: 'pickup', number: 0 },
 ];
 
 const SKILL: Record<Difficulty, [number, number]> = {
@@ -84,7 +84,6 @@ export class Race {
   private wrongWayTime = 0;
   private lastCountdownBeep = 4;
   private readonly wheelPoints: THREE.Vector3[] = [];
-  private readonly exhausts = [new THREE.Vector3(-0.45, 0.36, -2.35), new THREE.Vector3(0.45, 0.36, -2.35)];
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
 
@@ -115,7 +114,7 @@ export class Race {
       this.drivers.set(racer, new AIDriver(racer));
     });
     if (config.withPlayer) {
-      const player = new Racer({ name: 'You', color: 0xc8201a, stripe: 0xf2f2f2, isPlayer: true, skill: 1 }, track, playerSpec, onWall);
+      const player = new Racer({ name: 'You', color: 0xc8201a, stripe: 0xf2f2f2, bodyType: 'muscle', number: 1, isPlayer: true, skill: 1 }, track, playerSpec, onWall);
       this.racers.push(player);
       this.player = player;
       this.drivers.set(player, new AIDriver(player)); // takes over after the finish line
@@ -386,6 +385,7 @@ export class Race {
     this.racers.forEach((r, idx) => {
       const car = r.car;
       car.syncVisual(dt);
+      r.updateDamageVisual();
       const cmd = this.inputs.get(r) ?? NEUTRAL_INPUT;
 
       // Spawn protection blink.
@@ -406,7 +406,7 @@ export class Race {
       if (cmd.boost && !r.destroyed) {
         const [fx, fz] = car.physics.forward();
         const back = new THREE.Vector3(-fx, 0, -fz);
-        for (const e of this.exhausts) this.effects.boostFlame(r.worldPoint(e, this.tmp), back);
+        for (const e of car.visual.exhaustOffsets) this.effects.boostFlame(r.worldPoint(e, this.tmp), back);
       }
     });
 

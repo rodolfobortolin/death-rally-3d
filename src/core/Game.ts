@@ -6,6 +6,7 @@ import { Hud } from '../ui/Hud';
 import { Menu, type MenuAction } from '../ui/Menu';
 import { Minimap } from '../ui/Minimap';
 import { renderCarPortrait } from '../ui/Portraits';
+import { NameTags } from '../ui/NameTags';
 import { Standings } from '../ui/Standings';
 import { Environment } from '../world/Environment';
 import { Track } from '../world/Track';
@@ -32,6 +33,7 @@ export class Game {
   private readonly menu = new Menu();
   private readonly minimap: Minimap;
   private readonly standings = new Standings();
+  private readonly nameTags = new NameTags();
   private readonly timer = new THREE.Timer();
   private race: Race | null = null;
   private lastConfig: RaceConfig | null = null;
@@ -40,6 +42,8 @@ export class Game {
   private elapsed = 0;
   /** Mine key presses are latched until a physics sub-step consumes them. */
   private pendingMine = false;
+  /** Width of the HUD sidebar, so the camera can center the car in the free area. */
+  private hudInset = 0;
 
   constructor(container: HTMLElement) {
     this.cameraRig = new FollowCamera(window.innerWidth / window.innerHeight);
@@ -97,6 +101,8 @@ export class Game {
     if (config.withPlayer) {
       const portraits = new Map(race.racers.map((r) => [r, renderCarPortrait(this.renderer.webgl, r.car.object, this.scene.environment)] as const));
       this.standings.build(race, portraits);
+      if (race.player) this.hud.setPortrait(portraits.get(race.player) ?? '');
+      this.nameTags.build(race);
     }
     const f = race.focus.car.physics;
     this.cameraRig.snapTo(f.x, f.z, f.heading);
@@ -105,6 +111,8 @@ export class Game {
   private enterMenu(): void {
     this.state = 'menu';
     this.cameraRig.mode = 'cinematic';
+    this.hudInset = 0;
+    this.onResize();
     this.setRace({ laps: 99, opponents: 6, difficulty: 'hard', withPlayer: false });
     this.hud.setVisible(false);
     this.menu.show('menu');
@@ -117,6 +125,8 @@ export class Game {
     this.cameraRig.mode = 'classic';
     this.setRace(config);
     this.hud.setVisible(true);
+    this.hudInset = (document.querySelector('.sidebar') as HTMLElement | null)?.offsetWidth ?? 0;
+    this.onResize();
     this.menu.show(null);
     this.sound.playMusic('race-theme');
   }
@@ -153,6 +163,7 @@ export class Game {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.cameraRig.resize(w / h);
+    this.cameraRig.setLeftInset(this.hudInset, w, h);
     this.renderer.resize(w, h);
     this.effects.setViewport(h * this.renderer.webgl.getPixelRatio(), this.cameraRig.camera.fov);
   }
@@ -210,6 +221,7 @@ export class Game {
         this.hud.update(race);
         this.minimap.draw(race);
         this.standings.update(race);
+        this.nameTags.update(race, this.cameraRig.camera, window.innerWidth, window.innerHeight);
       }
     }
 

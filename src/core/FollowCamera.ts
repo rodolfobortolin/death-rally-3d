@@ -78,6 +78,12 @@ export class FollowCamera {
     }
   }
 
+  /** Shifts the image so the car is centered in the area right of a left sidebar. */
+  setLeftInset(px: number, width: number, height: number): void {
+    if (px > 0) this.camera.setViewOffset(width, height, -px / 2, 0, width, height);
+    else this.camera.clearViewOffset();
+  }
+
   resize(aspect: number): void {
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
