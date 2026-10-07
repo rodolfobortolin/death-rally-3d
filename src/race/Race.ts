@@ -54,6 +54,11 @@ const WEAPONS_FREE_AFTER = 4;
 const TURBO_DRAIN = 32;
 const CAR_RADIUS = 1.05;
 const CAR_CIRCLE_OFFSET = 1.1;
+/** Cars further apart in height than this are on different levels and pass each other. */
+const LEVEL_GAP = 2;
+/** Going over a cliff costs armor and time. */
+const FALL_DAMAGE = 30;
+const FALL_RECOVERY = 1.4;
 
 const RIVALS: Array<Omit<RacerProfile, 'isPlayer' | 'skill'>> = [
   { name: 'Viper', color: 0x2f8a3a, bodyType: 'shrieker' },
@@ -236,6 +241,7 @@ export class Race {
       this.inputs.set(r, cmd);
 
       r.car.step(cmd, dt);
+      this.updateFall(r, dt);
 
       const armed = this.raceTime > WEAPONS_FREE_AFTER || !this.config.withPlayer;
       if (cmd.fire && armed) this.combat.tryFire(r, r.isPlayer && !r.finished ? 0 : this.drivers.get(r)!.spread);
@@ -264,6 +270,27 @@ export class Race {
         this.phase = 'finished';
         this.onFinish(this.results());
       }
+    }
+  }
+
+  /** A car that went over a cliff takes damage and is put back on the track a moment later. */
+  private updateFall(r: Racer, dt: number): void {
+    if (!r.car.fallen) {
+      r.fallTimer = 0;
+      return;
+    }
+    if (r.destroyed) return;
+    if (r.fallTimer === 0) {
+      r.fallTimer = FALL_RECOVERY;
+      this.combat.damage(r, FALL_DAMAGE, null);
+      if (r.isPlayer && !r.destroyed) this.onMessage({ text: 'OVER THE EDGE!', banner: true });
+      return;
+    }
+    r.fallTimer -= dt;
+    if (r.fallTimer <= 0) {
+      r.fallTimer = 0;
+      r.car.resetToTrack();
+      r.invulnerable = Math.max(r.invulnerable, 1.5);
     }
   }
 
@@ -305,6 +332,7 @@ export class Race {
         const a = list[i].car.physics;
         const b = list[j].car.physics;
         if ((a.x - b.x) ** 2 + (a.z - b.z) ** 2 > 36) continue;
+        if (Math.abs(list[i].car.y - list[j].car.y) > LEVEL_GAP) continue;
         const [afx, afz] = a.forward();
         const [bfx, bfz] = b.forward();
         for (const oa of [CAR_CIRCLE_OFFSET, -CAR_CIRCLE_OFFSET]) {
@@ -335,7 +363,7 @@ export class Race {
             this.combat.impactDamage(list[i], strength, list[j]);
             this.combat.impactDamage(list[j], strength, list[i]);
             if (strength > 4) {
-              this.effects.sparksBurst(this.tmp.set((ax + bx) / 2, 0.6, (az + bz) / 2), Math.min(20, Math.floor(strength)));
+              this.effects.sparksBurst(this.tmp.set((ax + bx) / 2, list[i].car.y + 0.6, (az + bz) / 2), Math.min(20, Math.floor(strength)));
               if (list[i].isPlayer || list[j].isPlayer) this.sound.impact(strength);
             }
           }
@@ -422,7 +450,7 @@ export class Race {
 
       const v = this.tmp2.set(car.physics.vx, 0, car.physics.vz);
       const skidding = !r.destroyed && car.isSkidding(cmd);
-      const gravel = car.onGravel && car.physics.speed > 4;
+      const gravel = car.onGravel && car.physics.speed > 4 && !car.physics.airborne;
       car.rearWheelWorld(this.wheelPoints);
       this.wheelPoints.forEach((pt, w) => {
         this.effects.skids.update(`${idx}-${w}`, pt, skidding && !car.onGravel);

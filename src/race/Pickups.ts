@@ -19,6 +19,7 @@ const STYLE: Record<PickupType, { color: number; glow: number }> = {
 export interface Pickup {
   type: PickupType;
   x: number;
+  y: number;
   z: number;
   lateral: number;
   along: number;
@@ -128,9 +129,9 @@ export class Pickups {
         halo.position.y = -0.85;
         mesh.add(halo);
         const p = track.pointAt(along, lateral);
-        mesh.position.set(p.x, 1.2, p.z);
+        mesh.position.set(p.x, p.y + 1.2, p.z);
         this.group.add(mesh);
-        this.items.push({ type, x: p.x, z: p.z, lateral, along, mesh, active: true, timer: 0 });
+        this.items.push({ type, x: p.x, y: p.y, z: p.z, lateral, along, mesh, active: true, timer: 0 });
       });
     }
   }
@@ -151,7 +152,7 @@ export class Pickups {
       for (const r of racers) {
         if (r.destroyed) continue;
         const p = r.car.physics;
-        if ((p.x - item.x) ** 2 + (p.z - item.z) ** 2 < PICKUP_RADIUS ** 2) {
+        if ((p.x - item.x) ** 2 + (p.z - item.z) ** 2 < PICKUP_RADIUS ** 2 && Math.abs(r.car.y - item.y) < 2.5) {
           this.collect(item, r);
           break;
         }

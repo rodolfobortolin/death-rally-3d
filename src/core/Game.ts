@@ -197,8 +197,8 @@ export class Game {
       if (race.player) this.hud.setPortrait(renderCarPortrait(this.renderer.webgl, race.player.car.object, this.scene.environment) ?? '');
       this.nameTags.build(race);
     }
-    const f = race.focus.car.physics;
-    this.cameraRig.snapTo(f.x, f.z, f.heading);
+    const focus = race.focus.car;
+    this.cameraRig.snapTo(focus.physics.x, focus.y, focus.physics.z, focus.physics.heading);
   }
 
   private enterMenu(): void {
@@ -320,7 +320,7 @@ export class Game {
     if (race) {
       const focus = race.focus.car;
       const p = focus.physics;
-      this.cameraRig.update(p.x, p.z, p.heading, p.vx, p.vz, simulate ? dt : 0);
+      this.cameraRig.update(p.x, focus.y, p.z, p.heading, p.vx, p.vz, simulate ? dt : 0);
       this.environment.follow(focus.position);
       this.sound.setListener(p.x, p.z);
       if (this.state === 'racing') {

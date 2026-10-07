@@ -30,19 +30,19 @@ export class FollowCamera {
     this.shake = Math.min(1.5, this.shake + amount);
   }
 
-  snapTo(x: number, z: number, heading: number): void {
-    this.focus.set(x, 0, z);
+  snapTo(x: number, y: number, z: number, heading: number): void {
+    this.focus.set(x, y, z);
     this.yaw = heading;
-    this.update(x, z, heading, 0, 0, 1);
+    this.update(x, y, z, heading, 0, 0, 1);
   }
 
-  update(x: number, z: number, heading: number, vx: number, vz: number, dt: number): void {
+  update(x: number, y: number, z: number, heading: number, vx: number, vz: number, dt: number): void {
     const speed = Math.hypot(vx, vz);
     // Look ahead in the direction of travel so the player sees what is coming.
     const lead = clamp(speed * 0.35, 0, 14);
     const lx = speed > 0.1 ? (vx / speed) * lead : 0;
     const lz = speed > 0.1 ? (vz / speed) * lead : 0;
-    this.desired.set(x + lx, 0, z + lz);
+    this.desired.set(x + lx, y, z + lz);
     this.focus.lerp(this.desired, dt === 1 ? 1 : damp(4.5, dt));
 
     // Zoom out a little at speed.
@@ -67,7 +67,7 @@ export class FollowCamera {
     } else {
       this.yaw = heading;
     }
-    this.camera.position.set(this.focus.x + offX, height, this.focus.z + offZ);
+    this.camera.position.set(this.focus.x + offX, this.focus.y + height, this.focus.z + offZ);
     this.camera.lookAt(this.focus);
     if (this.shake > 0.001) {
       const s = this.shake * this.shake;

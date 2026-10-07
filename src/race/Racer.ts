@@ -38,6 +38,8 @@ export class Racer {
   lastAttacker: Racer | null = null;
   /** Seconds left to keep showing this car's damage bubble after the player hit it. */
   hitByPlayer = 0;
+  /** Seconds until a car that went over a cliff is put back on the track. */
+  fallTimer = 0;
 
   // Lap tracking.
   started = false;

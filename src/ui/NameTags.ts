@@ -67,7 +67,7 @@ export class NameTags {
         tag.root.style.opacity = '0';
         continue;
       }
-      this.v.set(p.x, 2.6, p.z).project(camera);
+      this.v.set(p.x, r.car.y + 2.6, p.z).project(camera);
       if (this.v.z > 1) {
         tag.root.style.opacity = '0';
         continue;

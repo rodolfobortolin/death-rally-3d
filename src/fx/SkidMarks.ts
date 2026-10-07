@@ -82,10 +82,11 @@ export class SkidMarks {
     }
     const nx = (-dz / len) * MARK_WIDTH * 0.5;
     const nz = (dx / len) * MARK_WIDTH * 0.5;
-    const y = 0.07;
+    const y0 = prev.y + 0.07;
+    const y1 = point.y + 0.07;
     const base = this.cursor * 12;
     this.positions.set(
-      [prev.x + nx, y, prev.z + nz, prev.x - nx, y, prev.z - nz, point.x + nx, y, point.z + nz, point.x - nx, y, point.z - nz],
+      [prev.x + nx, y0, prev.z + nz, prev.x - nx, y0, prev.z - nz, point.x + nx, y1, point.z + nz, point.x - nx, y1, point.z - nz],
       base,
     );
     this.alphas.set([intensity, intensity, intensity, intensity], this.cursor * 4);

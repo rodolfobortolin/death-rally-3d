@@ -109,7 +109,8 @@ export class Effects {
     });
   }
 
-  explosion(pos: THREE.Vector3, scale = 1): void {
+  /** `ground` is the height of the surface that gets scorched. */
+  explosion(pos: THREE.Vector3, scale = 1, ground = 0): void {
     const n = Math.round(60 * scale);
     for (let i = 0; i < n; i++) {
       const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.8, Math.random() - 0.5).normalize();
@@ -141,7 +142,7 @@ export class Effects {
     }
     this.sparksBurst(pos, Math.round(40 * scale), 22 * scale);
     this.flash(pos, 220 * scale, 0.6);
-    this.scorch(pos, 4.5 * scale);
+    this.scorch(pos, 4.5 * scale, ground);
     this.onExplosion(pos, scale);
   }
 
@@ -151,10 +152,10 @@ export class Effects {
     for (const m of this.scorchMarks) m.visible = false;
   }
 
-  scorch(pos: THREE.Vector3, size: number): void {
+  scorch(pos: THREE.Vector3, size: number, ground = 0): void {
     const m = this.scorchMarks[this.scorchCursor];
     this.scorchCursor = (this.scorchCursor + 1) % MAX_SCORCH;
-    m.position.set(pos.x, 0.075, pos.z);
+    m.position.set(pos.x, ground + 0.075, pos.z);
     m.scale.setScalar(size);
     m.rotation.y = Math.random() * Math.PI * 2;
     m.visible = true;

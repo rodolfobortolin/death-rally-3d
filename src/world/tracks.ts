@@ -21,6 +21,17 @@ export interface TrackDefinition {
   curbWidth: number;
   /** Distance from the centerline to the barrier face. */
   wallOffset: number;
+  /**
+   * Height of the road along the lap as [distance, height] keys, joined by straight
+   * ramps. Heights are above the surrounding ground (never negative); the lap ends
+   * at the height of the first key. Flat when omitted.
+   */
+  elevation?: Array<[number, number]>;
+  /**
+   * Stretches with no barrier on one side, where the deck ends in a drop to the
+   * ground: [from, to, side], with side 1 = the driver's right, -1 = left.
+   */
+  cliffs?: Array<[number, number, 1 | -1]>;
 }
 
 /** The first circuit: an industrial loop with a chicane and a long back straight. */
@@ -152,7 +163,33 @@ const COMPLEX: TrackDefinition = {
   wallOffset: 9,
 };
 
-export const TRACKS: TrackDefinition[] = [RUST_YARD, HELL_MOUNTAIN, SUBURBIA, TOXIC_DUMP, OASIS, DOWNTOWN, UTOPIA, COMPLEX];
+/**
+ * Test bed for terrain: a figure of eight whose first diagonal climbs onto a flyover
+ * over the second one. Distances in the comments are meters from the start line.
+ */
+const PROVING_GROUND: TrackDefinition = {
+  id: 'proving-ground',
+  name: 'Proving Ground',
+  subtitle: 'Terrain test: flyover, cliff edge, whoops and a jump',
+  theme: 'quarry',
+  // Both lobes turn 270 degrees, so the diagonals cross at right angles (at 153 m and 451 m).
+  path: [['S', 10], ['A', 135, 30], ['S', 130.711], ['A', -135, 30], ['S', 40], ['A', -135, 30], ['S', 130.711], ['A', 135, 30], ['S', 50]],
+  roadHalfWidth: 6,
+  curbWidth: 0.9,
+  wallOffset: 9,
+  elevation: [
+    [0, 0],
+    // Ramp onto the flyover; the crest at its far end throws fast cars into the air.
+    [95, 0], [131, 7], [167, 7], [205, 0],
+    // Climb to the cliff straight, then come down over two whoops.
+    [215, 0], [275, 6], [330, 6], [350, 3], [362, 3.4], [390, 0],
+    // Under the flyover, then a kicker.
+    [462, 0], [476, 1.8], [477.5, 0],
+  ],
+  cliffs: [[292, 318, 1]],
+};
+
+export const TRACKS: TrackDefinition[] = [RUST_YARD, HELL_MOUNTAIN, SUBURBIA, TOXIC_DUMP, OASIS, DOWNTOWN, UTOPIA, COMPLEX, PROVING_GROUND];
 export const DEFAULT_TRACK_ID = RUST_YARD.id;
 
 export function trackById(id: string): TrackDefinition {

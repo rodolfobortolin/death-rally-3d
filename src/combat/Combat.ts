@@ -10,6 +10,8 @@ const GUN_DAMAGE = 2.1;
 const GUN_SPREAD = 0.035;
 const CAR_HIT_RADIUS = 1.15;
 const CAR_HIT_OFFSET = 1.1;
+/** Bullets and mines only reach cars within this height of them (flyovers, cliffs, jumps). */
+const LEVEL_REACH = 2.2;
 
 /** Mines are live for everyone except their owner the moment they touch the ground. */
 const MINE_ARM_TIME = 0.05;
@@ -27,6 +29,7 @@ const WRECK_BLAST_DAMAGE = 18;
 
 export interface Mine {
   x: number;
+  y: number;
   z: number;
   owner: Racer;
   age: number;
@@ -87,6 +90,8 @@ export class Combat {
       const [fx, fz] = rp.forward();
       for (const off of [CAR_HIT_OFFSET, -CAR_HIT_OFFSET]) {
         const t = rayCircle(muzzle.x, muzzle.z, dx, dz, rp.x + fx * off, rp.z + fz * off, CAR_HIT_RADIUS);
+        // The round flies along the slope the shooter is on.
+        if (t !== null && Math.abs(muzzle.y + p.grade * t - (r.car.y + 0.6)) > LEVEL_REACH) continue;
         if (t !== null && t < hitT) {
           hitT = t;
           victim = r;
@@ -108,7 +113,7 @@ export class Combat {
       }
     }
 
-    const end = this.v2.set(muzzle.x + dx * hitT, 0.85, muzzle.z + dz * hitT);
+    const end = this.v2.set(muzzle.x + dx * hitT, victim ? victim.car.y + 0.85 : muzzle.y + p.grade * hitT, muzzle.z + dz * hitT);
     this.effects.tracers.add(muzzle, end);
     this.effects.muzzleFlash(muzzle);
     this.sound.gun(muzzle, shooter.isPlayer);
@@ -136,6 +141,7 @@ export class Combat {
     // Drop it just behind the rear bumper so a close follower runs straight into it.
     const x = p.x - fx * 2.7;
     const z = p.z - fz * 2.7;
+    const y = this.track.query(x, z, owner.car.trackIndex).y;
 
     const mesh = new THREE.Group();
     const body = new THREE.Mesh(this.mineBody, this.mineBodyMat);
@@ -145,9 +151,9 @@ export class Combat {
     const light = new THREE.Mesh(this.mineLightGeo, this.mineLightMat);
     light.position.y = 0.25;
     mesh.add(light);
-    mesh.position.set(x, 0.03, z);
+    mesh.position.set(x, y + 0.03, z);
     this.group.add(mesh);
-    this.mines.push({ x, z, owner, age: 0, mesh });
+    this.mines.push({ x, y, z, owner, age: 0, mesh });
     this.sound.mineDrop(mesh.position);
 
     if (this.mines.length > MAX_MINES) this.removeMine(0);
@@ -160,9 +166,9 @@ export class Combat {
 
   private detonate(index: number): void {
     const mine = this.mines[index];
-    const pos = new THREE.Vector3(mine.x, 0.5, mine.z);
+    const pos = new THREE.Vector3(mine.x, mine.y + 0.5, mine.z);
     this.removeMine(index);
-    this.effects.explosion(pos, 1);
+    this.effects.explosion(pos, 1, mine.y);
     this.sound.explosion(pos, 1);
     // A fresh mine never hurts the car that just dropped it.
     const spared = mine.age < MINE_OWNER_GRACE ? mine.owner : null;
@@ -177,7 +183,7 @@ export class Combat {
       const dx = p.x - pos.x;
       const dz = p.z - pos.z;
       const d = Math.hypot(dx, dz);
-      if (d > radius) continue;
+      if (d > radius || Math.abs(r.car.y - pos.y) > radius * 0.6) continue;
       const k = 1 - d / radius;
       const nx = d > 0.01 ? dx / d : 1;
       const nz = d > 0.01 ? dz / d : 0;
@@ -207,8 +213,8 @@ export class Combat {
     if (killer) killer.kills++;
     const p = victim.car.physics;
     p.applyImpulse(0, 0, (Math.random() - 0.5) * 6);
-    const pos = new THREE.Vector3(p.x, 0.8, p.z);
-    this.effects.explosion(pos, 1.6);
+    const pos = new THREE.Vector3(p.x, victim.car.y + 0.8, p.z);
+    this.effects.explosion(pos, 1.6, victim.car.y);
     this.sound.explosion(pos, 1.6);
     this.blast(pos, WRECK_BLAST_RADIUS, WRECK_BLAST_DAMAGE, killer, 8);
     this.events.onWreck?.(victim, killer);
@@ -242,7 +248,7 @@ export class Combat {
       for (const r of this.racers) {
         if (r.destroyed) continue;
         if (r === m.owner && m.age < MINE_OWNER_GRACE) continue;
-        if (this.touchesCar(r, m.x, m.z, MINE_TRIGGER_RADIUS + CAR_HIT_RADIUS)) {
+        if (Math.abs(r.car.y - m.y) < LEVEL_REACH && this.touchesCar(r, m.x, m.z, MINE_TRIGGER_RADIUS + CAR_HIT_RADIUS)) {
           this.detonate(i);
           break;
         }

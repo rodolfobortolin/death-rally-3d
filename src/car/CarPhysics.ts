@@ -27,6 +27,9 @@ export const DEFAULT_CAR_SPEC: CarSpec = {
   handbrakeGrip: 1.4,
 };
 
+/** Stronger than real gravity, so jumps stay short and slopes are felt at arcade speeds. */
+export const GRAVITY = 26;
+
 /**
  * Arcade top-down car physics in the XZ plane. Heading 0 faces +Z.
  * Forward = (sin h, cos h), right = (-cos h, sin h) for a top-down view where
@@ -46,6 +49,10 @@ export class CarPhysics {
   isBraking = false;
   /** Multiplier for drag and top speed when driving on gravel. */
   surfaceDrag = 0;
+  /** Slope of the ground in the direction the car points (rise per meter). */
+  grade = 0;
+  /** Wheels off the ground: no drive, brakes, steering or grip until it lands. */
+  airborne = false;
 
   constructor(public spec: CarSpec = DEFAULT_CAR_SPEC) {}
 
@@ -66,6 +73,8 @@ export class CarPhysics {
     this.z = z;
     this.heading = heading;
     this.vx = this.vz = this.yawRate = this.steerAngle = 0;
+    this.grade = 0;
+    this.airborne = false;
   }
 
   step(input: DriveInput, dt: number): void {
@@ -74,6 +83,19 @@ export class CarPhysics {
     const [rx, rz] = this.right();
     let vF = this.vx * fx + this.vz * fz;
     let vR = this.vx * rx + this.vz * rz;
+
+    if (this.airborne) {
+      // Ballistic: momentum carries the car and it keeps whatever spin it took off with.
+      this.isBraking = false;
+      this.steerAngle += (input.steer - this.steerAngle) * damp(12, dt);
+      this.yawRate *= Math.exp(-0.8 * dt);
+      this.heading += this.yawRate * dt;
+      this.x += this.vx * dt;
+      this.z += this.vz * dt;
+      this.slip = vR;
+      this.forwardSpeed = vF;
+      return;
+    }
 
     // Longitudinal: throttle, brake and reverse. Turbo raises both power and top speed.
     const boosting = input.boost && input.throttle > 0;
@@ -104,6 +126,8 @@ export class CarPhysics {
     // Rolling resistance plus extra drag on gravel; coasting slowly bleeds speed.
     const drag = 0.12 + this.surfaceDrag * 1.6 + (input.throttle === 0 && input.brake === 0 ? 0.25 : 0);
     vF -= vF * drag * dt;
+    // Climbing costs speed, descending gives it back.
+    vF -= GRAVITY * this.grade * dt;
     if (input.throttle === 0 && input.brake === 0 && Math.abs(vF) < 0.3) vF = 0;
 
     // Lateral: tires bleed sideways velocity; less grip when sliding or handbraking.

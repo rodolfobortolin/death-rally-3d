@@ -29,6 +29,15 @@ export interface TrackSample {
   dist: number;
   /** Signed curvature (1 / radius); positive turns right. */
   curvature: number;
+  /** Height of the road above the surrounding ground. */
+  y: number;
+  /** Rise per meter in the direction of travel. */
+  grade: number;
+  /** Sides with no barrier, where the deck ends in a drop to the ground. */
+  cliffLeft: boolean;
+  cliffRight: boolean;
+  /** True where the road is a bridge over another stretch of the track. */
+  bridge: boolean;
 }
 
 export interface TrackQuery {
@@ -38,11 +47,26 @@ export interface TrackQuery {
   /** Distance along the track from the start line. */
   along: number;
   sample: TrackSample;
+  /** Height of the ground under the point: the road deck, or the low ground past a cliff edge. */
+  y: number;
+  /** Rise per meter in the direction of travel. */
+  grade: number;
+  /** True when the point is past a cliff edge. */
+  overEdge: boolean;
 }
 
 export type { TrackDefinition } from './tracks';
 
 const SAMPLE_SPACING = 1.5;
+/** How far the deck reaches past the curb on a cliff side. */
+const CLIFF_SHOULDER = 0.4;
+/** Minimum height difference for one stretch of track to count as passing over another. */
+const BRIDGE_CLEARANCE = 3;
+const BRIDGE_THICKNESS = 0.9;
+
+/** A lateral offset that is either fixed or depends on the sample (cliff edges). */
+type Offset = number | ((s: TrackSample) => number);
+const offsetAt = (o: Offset, s: TrackSample): number => (typeof o === 'number' ? o : o(s));
 
 /** Barrier cross-sections as [distance outwards from the barrier face, height]. */
 const BARRIER_PROFILES = {
@@ -113,6 +137,10 @@ export class Track {
   readonly samples: TrackSample[] = [];
   readonly length: number;
   readonly group = new THREE.Group();
+  /** Actual distance between samples. */
+  private readonly spacing: number;
+  /** Lateral offset of the deck edge on a cliff side. */
+  private readonly cliffEdge: number;
 
   constructor(def: TrackDefinition = trackById(DEFAULT_TRACK_ID)) {
     this.def = def;
@@ -123,7 +151,9 @@ export class Track {
       'centripetal',
     );
     this.length = curve.getLength();
+    this.cliffEdge = def.roadHalfWidth + def.curbWidth + CLIFF_SHOULDER;
     const count = Math.round(this.length / SAMPLE_SPACING);
+    this.spacing = this.length / count;
     const pts = curve.getSpacedPoints(count).slice(0, count); // drop the duplicated closing point
     for (let i = 0; i < count; i++) {
       const prev = pts[(i - 1 + count) % count];
@@ -133,7 +163,10 @@ export class Track {
       const len = Math.hypot(tx, tz);
       tx /= len;
       tz /= len;
-      this.samples.push({ x: pts[i].x, z: pts[i].z, tx, tz, rx: -tz, rz: tx, dist: (i / count) * this.length, curvature: 0 });
+      this.samples.push({
+        x: pts[i].x, z: pts[i].z, tx, tz, rx: -tz, rz: tx, dist: (i / count) * this.length, curvature: 0,
+        y: 0, grade: 0, cliffLeft: false, cliffRight: false, bridge: false,
+      });
     }
     // Curvature from the change of heading between neighbours.
     for (let i = 0; i < count; i++) {
@@ -144,7 +177,50 @@ export class Track {
       // Positive cross means a left turn in this coordinate system; flip so right turns are positive.
       this.samples[i].curvature = -Math.asin(THREE.MathUtils.clamp(cross, -1, 1)) / ds;
     }
+    this.applyTerrain();
     this.buildMeshes();
+  }
+
+  /** Fills in the height, grade, cliff edges and bridges of every sample. */
+  private applyTerrain(): void {
+    const n = this.samples.length;
+    const L = this.length;
+    const keys = [...(this.def.elevation ?? [])].sort((a, b) => a[0] - b[0]);
+    if (keys.length > 0) {
+      // The profile wraps around: the lap ends at the height of the first key.
+      keys.push([keys[0][0] + L, keys[0][1]]);
+      const raw = this.samples.map((s) => {
+        const d = s.dist < keys[0][0] ? s.dist + L : s.dist;
+        let k = 0;
+        while (k < keys.length - 2 && d > keys[k + 1][0]) k++;
+        const [d0, h0] = keys[k];
+        const [d1, h1] = keys[k + 1];
+        return h0 + (h1 - h0) * THREE.MathUtils.clamp((d - d0) / Math.max(1e-6, d1 - d0), 0, 1);
+      });
+      // Round off the kinks between ramps a little.
+      this.samples.forEach((s, i) => (s.y = Math.max(0, (raw[(i - 1 + n) % n] + 2 * raw[i] + raw[(i + 1) % n]) / 4)));
+    }
+    this.samples.forEach((s, i) => (s.grade = (this.samples[(i + 1) % n].y - this.samples[(i - 1 + n) % n].y) / (2 * this.spacing)));
+
+    for (const [from, to, side] of this.def.cliffs ?? []) {
+      for (const s of this.samples) {
+        const inside = from <= to ? s.dist >= from && s.dist <= to : s.dist >= from || s.dist <= to;
+        if (!inside) continue;
+        if (side === 1) s.cliffRight = true;
+        else s.cliffLeft = true;
+      }
+    }
+
+    // A raised stretch is a bridge where another, lower part of the track runs beneath it.
+    const reach = (this.def.wallOffset + 4) ** 2;
+    const apart = Math.ceil(60 / this.spacing);
+    this.samples.forEach((s, i) => {
+      if (s.y < BRIDGE_CLEARANCE) return;
+      s.bridge = this.samples.some((o, j) => {
+        const gap = Math.abs(i - j);
+        return Math.min(gap, n - gap) > apart && s.y - o.y > BRIDGE_CLEARANCE && (s.x - o.x) ** 2 + (s.z - o.z) ** 2 < reach;
+      });
+    });
   }
 
   /** Finds the closest centerline segment. `hint` speeds up the search for moving objects. */
@@ -175,11 +251,21 @@ export class Track {
     let along = s.dist + t;
     if (along < 0) along += this.length;
     if (along >= this.length) along -= this.length;
-    return { index: best, lateral, along, sample: s };
+    // Height: towards the neighbour on the same side of the sample as the point.
+    const other = this.samples[(best + (t >= 0 ? 1 : n - 1)) % n];
+    const overEdge = (s.cliffRight && lateral > this.cliffEdge) || (s.cliffLeft && lateral < -this.cliffEdge);
+    const y = overEdge ? 0 : s.y + (other.y - s.y) * Math.min(1, Math.abs(t) / this.spacing);
+    return { index: best, lateral, along, sample: s, y, grade: s.grade, overEdge };
+  }
+
+  /** Index of the sample at a distance along the track, to seed `query` hints. */
+  indexAt(along: number): number {
+    const n = this.samples.length;
+    return ((Math.round((along / this.length) * n) % n) + n) % n;
   }
 
   /** World position at a given distance along the track and lateral offset. */
-  pointAt(along: number, lateral = 0): { x: number; z: number; heading: number } {
+  pointAt(along: number, lateral = 0): { x: number; y: number; z: number; heading: number } {
     const n = this.samples.length;
     const f = (((along % this.length) + this.length) % this.length) / this.length * n;
     const i0 = Math.floor(f) % n;
@@ -190,7 +276,7 @@ export class Track {
     const x = a.x + (b.x - a.x) * t + (a.rx + (b.rx - a.rx) * t) * lateral;
     const z = a.z + (b.z - a.z) * t + (a.rz + (b.rz - a.rz) * t) * lateral;
     const heading = Math.atan2(a.tx + (b.tx - a.tx) * t, a.tz + (b.tz - a.tz) * t);
-    return { x, z, heading };
+    return { x, y: a.y + (b.y - a.y) * t, z, heading };
   }
 
   /** Minimum distance from a point to the centerline (used for prop placement). */
@@ -205,10 +291,10 @@ export class Track {
   // ---------------------------------------------------------------------------
 
   /**
-   * Builds a horizontal strip between two lateral offsets. U goes across (0..1),
-   * V goes along the track in units of `tileLength` meters.
+   * Builds a strip of road surface between two lateral offsets, `y` above the deck.
+   * U goes across (0..1), V goes along the track in units of `tileLength` meters.
    */
-  private buildStrip(offsetA: number, offsetB: number, y: number, tileLength: number): THREE.BufferGeometry {
+  private buildStrip(offsetA: Offset, offsetB: Offset, y: number, tileLength: number): THREE.BufferGeometry {
     const n = this.samples.length;
     const positions: number[] = [];
     const uvs: number[] = [];
@@ -219,10 +305,15 @@ export class Track {
     for (let i = 0; i <= n; i++) {
       const s = this.samples[i % n];
       const v = (i / n) * vTotal;
-      positions.push(s.x + s.rx * offsetA, y, s.z + s.rz * offsetA);
-      positions.push(s.x + s.rx * offsetB, y, s.z + s.rz * offsetB);
+      const a = offsetAt(offsetA, s);
+      const b = offsetAt(offsetB, s);
+      positions.push(s.x + s.rx * a, s.y + y, s.z + s.rz * a);
+      positions.push(s.x + s.rx * b, s.y + y, s.z + s.rz * b);
       uvs.push(0, v, 1, v);
-      normals.push(0, 1, 0, 0, 1, 0);
+      // The surface tilts with the grade.
+      const k = 1 / Math.hypot(1, s.grade);
+      const normal = [-s.grade * s.tx * k, k, -s.grade * s.tz * k];
+      normals.push(...normal, ...normal);
     }
     for (let i = 0; i < n; i++) {
       const a = i * 2;
@@ -266,12 +357,14 @@ export class Track {
       for (let i = 0; i <= n; i++) {
         const s = this.samples[i % n];
         const u = (i / n) * uTotal;
-        positions.push(s.x + s.rx * o0, y0, s.z + s.rz * o0);
-        positions.push(s.x + s.rx * o1, y1, s.z + s.rz * o1);
+        positions.push(s.x + s.rx * o0, s.y + y0, s.z + s.rz * o0);
+        positions.push(s.x + s.rx * o1, s.y + y1, s.z + s.rz * o1);
         uvs.push(u, lengths[p] / perimeter, u, lengths[p + 1] / perimeter);
         vert += 2;
       }
       for (let i = 0; i < n; i++) {
+        // No barrier along a cliff edge.
+        if (this.isCliff(i, side) || this.isCliff(i + 1, side)) continue;
         const a = base + i * 2;
         const b = a + 1;
         const c = a + 2;
@@ -280,6 +373,74 @@ export class Track {
         if (side === 1) indices.push(a, b, c, b, d, c);
         else indices.push(a, c, b, b, c, d);
       }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    g.setIndex(indices);
+    g.computeVertexNormals();
+    return g;
+  }
+
+  private isCliff(i: number, side: 1 | -1): boolean {
+    const s = this.samples[i % this.samples.length];
+    return side === 1 ? s.cliffRight : s.cliffLeft;
+  }
+
+  /**
+   * Builds what holds a raised deck up on one side: a retaining wall down to the
+   * ground, or just the edge of the slab where the road is a bridge. `depth` is how
+   * far the barrier reaches past the wall offset.
+   */
+  private buildEmbankment(side: 1 | -1, depth: number): THREE.BufferGeometry {
+    const n = this.samples.length;
+    const tile = 4;
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+    for (let i = 0; i <= n; i++) {
+      const s = this.samples[i % n];
+      const o = side * (this.isCliff(i, side) ? this.cliffEdge : this.def.wallOffset + depth);
+      const bottom = s.bridge ? s.y - BRIDGE_THICKNESS : -0.3;
+      const u = (i / n) * Math.round(this.length / tile);
+      positions.push(s.x + s.rx * o, s.y + 0.02, s.z + s.rz * o);
+      positions.push(s.x + s.rx * o, bottom, s.z + s.rz * o);
+      uvs.push(u, s.y / tile, u, bottom / tile);
+    }
+    for (let i = 0; i < n; i++) {
+      if (this.samples[i].y < 0.03 && this.samples[(i + 1) % n].y < 0.03) continue;
+      const a = i * 2;
+      const b = a + 1;
+      const c = a + 2;
+      const d = a + 3;
+      if (side === 1) indices.push(a, b, c, b, d, c);
+      else indices.push(a, c, b, b, c, d);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    g.setIndex(indices);
+    g.computeVertexNormals();
+    return g;
+  }
+
+  /** Underside of the slab where the road is a bridge. */
+  private buildBridgeSoffit(depth: number): THREE.BufferGeometry {
+    const n = this.samples.length;
+    const o = this.def.wallOffset + depth;
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+    for (let i = 0; i <= n; i++) {
+      const s = this.samples[i % n];
+      const y = s.y - BRIDGE_THICKNESS;
+      positions.push(s.x - s.rx * o, y, s.z - s.rz * o, s.x + s.rx * o, y, s.z + s.rz * o);
+      uvs.push(0, s.dist / 4, (o * 2) / 4, s.dist / 4);
+    }
+    for (let i = 0; i < n; i++) {
+      if (!this.samples[i].bridge || !this.samples[(i + 1) % n].bridge) continue;
+      const a = i * 2;
+      indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -319,7 +480,10 @@ export class Track {
     runoffTex.map.repeat.set(...look.runoffRepeat);
     runoffTex.normalMap.repeat.set(...look.runoffRepeat);
     const runoffMat = new THREE.MeshStandardMaterial({ color: look.runoffColor, roughness: 1, map: runoffTex.map, normalMap: runoffTex.normalMap });
-    for (const [a, b] of [[-wo, -hw - cw], [hw + cw, wo]]) {
+    // Along a cliff the run-off shrinks to a narrow shoulder.
+    const leftEdge: Offset = (s) => (s.cliffLeft ? -this.cliffEdge : -wo);
+    const rightEdge: Offset = (s) => (s.cliffRight ? this.cliffEdge : wo);
+    for (const [a, b] of [[leftEdge, -hw - cw], [hw + cw, rightEdge]] as Array<[Offset, Offset]>) {
       const runoff = new THREE.Mesh(this.buildStrip(a, b, 0.02, 6), runoffMat);
       runoff.receiveShadow = true;
       this.group.add(runoff);
@@ -331,6 +495,22 @@ export class Track {
       barrier.castShadow = true;
       barrier.receiveShadow = true;
       this.group.add(barrier);
+    }
+
+    if (this.samples.some((s) => s.y > 0.03)) {
+      const depth = Math.max(...look.barrierProfile.map(([d]) => d));
+      const wallMat = new THREE.MeshStandardMaterial({ map: createConcreteTexture(), roughness: 0.95, color: 0x8d8478 });
+      for (const side of [-1, 1] as const) {
+        const wall = new THREE.Mesh(this.buildEmbankment(side, depth), wallMat);
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        this.group.add(wall);
+      }
+      if (this.samples.some((s) => s.bridge)) {
+        const soffit = new THREE.Mesh(this.buildBridgeSoffit(depth), wallMat);
+        soffit.castShadow = true;
+        this.group.add(soffit);
+      }
     }
 
     this.buildStartLine();
@@ -353,7 +533,7 @@ export class Track {
       new THREE.MeshStandardMaterial({ map: checker, roughness: 0.6 }),
     );
     line.rotation.set(-Math.PI / 2, 0, heading);
-    line.position.set(s.x, 0.05, s.z);
+    line.position.set(s.x, s.y + 0.05, s.z);
     line.receiveShadow = true;
     this.group.add(line);
 
@@ -377,7 +557,7 @@ export class Track {
     );
     sign.position.y = 7;
     gantry.add(sign);
-    gantry.position.set(s.x, 0, s.z);
+    gantry.position.set(s.x, s.y, s.z);
     gantry.rotation.y = heading;
     this.group.add(gantry);
   }
