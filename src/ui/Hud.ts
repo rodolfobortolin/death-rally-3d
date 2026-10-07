@@ -1,5 +1,5 @@
 import type { Race } from '../race/Race';
-import { MAX_HEALTH, MAX_TURBO } from '../race/Racer';
+import { MAX_TURBO } from '../race/Racer';
 
 export const formatTime = (seconds: number): string => {
   const m = Math.floor(seconds / 60);
@@ -72,7 +72,7 @@ export class Hud {
     this.drawGauge(kmh);
     this.setStyle(this.turbo, 'width', `${Math.round((p.turbo / MAX_TURBO) * 100)}%`);
 
-    const damage = p.destroyed ? 100 : Math.round((1 - p.health / MAX_HEALTH) * 100);
+    const damage = p.destroyed ? 100 : Math.round((1 - p.health / p.maxHealth) * 100);
     this.set(this.damage, `${damage}%`);
     this.setStyle(this.damageTint, 'opacity', (damage / 100).toFixed(2));
 

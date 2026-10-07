@@ -24,7 +24,7 @@ export const RESPAWN_DELAY = 3;
 /** A car taking part in a race, plus its combat stats and lap bookkeeping. */
 export class Racer {
   readonly car: Car;
-  health = MAX_HEALTH;
+  health: number;
   ammo = START_AMMO;
   mines = START_MINES;
   turbo = MAX_TURBO;
@@ -55,7 +55,10 @@ export class Racer {
     track: Track,
     spec: CarSpec,
     onWallImpact: (racer: Racer, x: number, y: number, z: number, strength: number) => void,
+    /** Armor capacity; tougher cars have more. */
+    readonly maxHealth = MAX_HEALTH,
   ) {
+    this.health = maxHealth;
     this.car = new Car(track, { bodyColor: profile.color, stripeColor: profile.stripe, bodyType: profile.bodyType, number: profile.number }, spec, {
       onImpact: (x, y, z, s) => onWallImpact(this, x, y, z, s),
     });
@@ -77,11 +80,11 @@ export class Racer {
 
   /** Refreshes dents, loose parts and paint from the current armor. */
   updateDamageVisual(): void {
-    this.car.damage.apply(this.destroyed ? 1 : 1 - this.health / MAX_HEALTH, this.destroyed);
+    this.car.damage.apply(this.destroyed ? 1 : 1 - this.health / this.maxHealth, this.destroyed);
   }
 
   repair(): void {
-    this.health = MAX_HEALTH;
+    this.health = this.maxHealth;
     this.destroyed = false;
     this.invulnerable = 2;
     this.lastAttacker = null;

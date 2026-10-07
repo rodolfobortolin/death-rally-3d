@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { Sound } from '../audio/Sound';
 import { Effects } from '../fx/Effects';
+import { CARS, DEFAULT_CAR_ID } from '../car/CarCatalog';
+import { CarDamage } from '../car/CarDamage';
+import { createCarModel } from '../car/CarModel';
 import { Race, type RaceConfig } from '../race/Race';
 import { Hud } from '../ui/Hud';
 import { Menu, type MenuAction } from '../ui/Menu';
@@ -66,7 +69,22 @@ export class Game {
 
     window.addEventListener('resize', () => this.onResize());
     this.onResize();
+    this.buildCarPreviews();
     this.enterMenu();
+  }
+
+  /** Renders a showroom shot of every selectable car for the garage panel. */
+  private buildCarPreviews(): void {
+    const previews = new Map<string, string>();
+    for (const def of CARS) {
+      const model = createCarModel({ bodyColor: def.color, stripeColor: def.stripe, bodyType: def.bodyType, number: def.number });
+      new CarDamage(model, 1).apply(0, false); // adds the paint's vertex colors
+      previews.set(def.id, renderCarPortrait(this.renderer.webgl, model.root, this.scene.environment, 400, 240));
+      model.root.traverse((o) => {
+        if (o instanceof THREE.Mesh) o.geometry.dispose();
+      });
+    }
+    this.menu.setCarPreviews(previews);
   }
 
   start(): void {
@@ -113,7 +131,7 @@ export class Game {
     this.cameraRig.mode = 'cinematic';
     this.hudInset = 0;
     this.onResize();
-    this.setRace({ laps: 99, opponents: 6, difficulty: 'hard', withPlayer: false, respawn: true });
+    this.setRace({ laps: 99, opponents: 6, difficulty: 'hard', withPlayer: false, respawn: true, car: DEFAULT_CAR_ID });
     this.hud.setVisible(false);
     this.menu.show('menu');
     this.sound.playMusic('menu-theme');

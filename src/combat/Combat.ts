@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Sound } from '../audio/Sound';
 import type { Effects } from '../fx/Effects';
-import { MAX_HEALTH, type Racer } from '../race/Racer';
+import type { Racer } from '../race/Racer';
 import type { Track } from '../world/Track';
 
 const GUN_INTERVAL = 0.085;
@@ -227,7 +227,7 @@ export class Combat {
       r.fireCooldown = Math.max(0, r.fireCooldown - dt);
       r.mineCooldown = Math.max(0, r.mineCooldown - dt);
       r.invulnerable = Math.max(0, r.invulnerable - dt);
-      if (r.health > MAX_HEALTH) r.health = MAX_HEALTH;
+      if (r.health > r.maxHealth) r.health = r.maxHealth;
     }
 
     for (let i = this.mines.length - 1; i >= 0; i--) {

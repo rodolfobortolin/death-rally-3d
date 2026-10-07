@@ -1,14 +1,18 @@
 import * as THREE from 'three';
 
-const WIDTH = 240;
-const HEIGHT = 144;
 
 /**
  * Renders a small 3/4 view of a car into a data URL, using the main renderer.
  * The frame is drawn to the WebGL canvas and copied immediately, before the
  * browser presents it, so nothing flashes on screen.
  */
-export function renderCarPortrait(renderer: THREE.WebGLRenderer, car: THREE.Object3D, environment: THREE.Texture | null): string {
+export function renderCarPortrait(
+  renderer: THREE.WebGLRenderer,
+  car: THREE.Object3D,
+  environment: THREE.Texture | null,
+  width = 240,
+  height = 144,
+): string {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x15120f);
   scene.environment = environment;
@@ -28,7 +32,7 @@ export function renderCarPortrait(renderer: THREE.WebGLRenderer, car: THREE.Obje
   });
   scene.add(model);
 
-  const camera = new THREE.PerspectiveCamera(28, WIDTH / HEIGHT, 0.1, 50);
+  const camera = new THREE.PerspectiveCamera(28, width / height, 0.1, 50);
   camera.position.set(1.3, 3.3, 7.0);
   camera.lookAt(0.1, 0.55, 0);
 
@@ -37,18 +41,18 @@ export function renderCarPortrait(renderer: THREE.WebGLRenderer, car: THREE.Obje
   const prevTarget = renderer.getRenderTarget();
   const prevToneMapping = renderer.toneMapping;
   renderer.setRenderTarget(null);
-  renderer.setViewport(0, 0, WIDTH, HEIGHT);
-  renderer.setScissor(0, 0, WIDTH, HEIGHT);
+  renderer.setViewport(0, 0, width, height);
+  renderer.setScissor(0, 0, width, height);
   renderer.setScissorTest(true);
   renderer.render(scene, camera);
 
   const canvas = document.createElement('canvas');
-  canvas.width = WIDTH;
-  canvas.height = HEIGHT;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d')!;
   // The viewport sits at the bottom-left of the drawing buffer.
   const src = renderer.domElement;
-  ctx.drawImage(src, 0, src.height - HEIGHT * pr, WIDTH * pr, HEIGHT * pr, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(src, 0, src.height - height * pr, width * pr, height * pr, 0, 0, canvas.width, canvas.height);
 
   renderer.setScissorTest(false);
   renderer.setViewport(0, 0, size.x, size.y);

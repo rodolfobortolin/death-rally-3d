@@ -31,6 +31,7 @@ Open http://localhost:5173 in your browser.
 ## Gameplay
 
 - Race against up to 7 AI rivals over 1 to 8 laps, on easy, normal or hard.
+- Pick your car in the menu: **Vagabond** (nimble buggy), **Dervish** (balanced muscle car), **Sentinel** (armored pickup) or **Shrieker** (fastest, fragile). Each has its own top speed, acceleration, handling and armor ratings (`src/car/CarCatalog.ts`), ready for engine, tire and armor upgrades.
 - Every car has armor, a hood-mounted machine gun, mines and a turbo tank.
 - Wrecked cars explode, damage anything nearby and are out of the race, left burning on the track as obstacles; whoever caused it gets the kill. If you get wrecked, the race is over for you. Turn on RESPAWN in the menu to bring wrecks back after a few seconds instead.
 - Floating crates on the track refill **repair** (green), **ammo** (yellow), **turbo** (blue) and **mines** (red).

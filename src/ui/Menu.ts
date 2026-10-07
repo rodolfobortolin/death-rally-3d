@@ -1,3 +1,4 @@
+import { CARS, carById, DEFAULT_CAR_ID, effectiveStats, type CarStats } from '../car/CarCatalog';
 import type { Difficulty, RaceConfig, RaceResult } from '../race/Race';
 import { formatTime } from './Hud';
 
@@ -10,6 +11,7 @@ export interface Settings {
   difficulty: Difficulty;
   sound: boolean;
   respawn: boolean;
+  car: string;
 }
 
 const OPTIONS = {
@@ -18,12 +20,20 @@ const OPTIONS = {
   difficulty: ['easy', 'normal', 'hard'] as Difficulty[],
   sound: [true, false],
   respawn: [false, true],
+  car: CARS.map((c) => c.id),
 };
+
+const STAT_LABELS: Array<[keyof CarStats, string]> = [
+  ['speed', 'TOP SPEED'],
+  ['acceleration', 'ACCEL'],
+  ['handling', 'HANDLING'],
+  ['armor', 'ARMOR'],
+];
 
 const STORAGE_KEY = 'death-rally-3d.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true, respawn: false };
+  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true, respawn: false, car: DEFAULT_CAR_ID };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return { ...defaults, ...(JSON.parse(raw) as Partial<Settings>) };
@@ -40,6 +50,7 @@ export class Menu {
   onSettingsChange: (settings: Settings) => void = () => {};
   onClick: () => void = () => {};
   private current: ScreenId | null = 'menu';
+  private carPreviews = new Map<string, string>();
   private readonly screens: Record<ScreenId, HTMLElement> = {
     menu: document.getElementById('menu')!,
     controls: document.getElementById('controls')!,
@@ -66,7 +77,19 @@ export class Menu {
         }),
       );
     });
+    document.querySelectorAll<HTMLButtonElement>('[data-car-dir]').forEach((b) =>
+      b.addEventListener('click', () => {
+        this.onClick();
+        this.cycle('car', Number(b.dataset.carDir));
+      }),
+    );
     this.renderOptions();
+  }
+
+  /** Car preview images, keyed by car id. */
+  setCarPreviews(previews: Map<string, string>): void {
+    this.carPreviews = previews;
+    this.renderGarage();
   }
 
   get visible(): ScreenId | null {
@@ -85,7 +108,7 @@ export class Menu {
   }
 
   raceConfig(): RaceConfig {
-    return { laps: this.settings.laps, opponents: this.settings.opponents, difficulty: this.settings.difficulty, withPlayer: true, respawn: this.settings.respawn };
+    return { laps: this.settings.laps, opponents: this.settings.opponents, difficulty: this.settings.difficulty, withPlayer: true, respawn: this.settings.respawn, car: this.settings.car };
   }
 
   private cycle(key: keyof Settings, dir: number): void {
@@ -111,6 +134,22 @@ export class Menu {
     document.querySelectorAll<HTMLElement>('[data-option]').forEach((row) => {
       row.querySelector('[data-value]')!.textContent = label(row.dataset.option as keyof Settings);
     });
+    this.renderGarage();
+  }
+
+  private renderGarage(): void {
+    const def = carById(this.settings.car);
+    const stats = effectiveStats(def);
+    const img = document.getElementById('garage-img') as HTMLImageElement;
+    const src = this.carPreviews.get(def.id);
+    if (src) img.src = src;
+    document.getElementById('garage-name')!.textContent = def.name.toUpperCase();
+    document.getElementById('garage-tag')!.textContent = def.tagline;
+    document.getElementById('garage-stats')!.innerHTML = STAT_LABELS.map(([key, text]) => {
+      const cells = Array.from({ length: 10 }, (_, i) => `<i class="${i < Math.round(stats[key]) ? 'on' : ''}"></i>`).join('');
+      return `<div class="stat"><span>${text}</span><div class="stat-bar">${cells}</div></div>`;
+    }).join('');
+    document.getElementById('garage-dots')!.innerHTML = CARS.map((c) => `<i class="${c.id === def.id ? 'on' : ''}"></i>`).join('');
   }
 
   showResults(results: RaceResult[]): void {

@@ -1,5 +1,5 @@
 import type { Race } from '../race/Race';
-import { MAX_HEALTH, type Racer } from '../race/Racer';
+import type { Racer } from '../race/Racer';
 import { ordinalSuffix } from './Hud';
 
 interface Card {
@@ -68,7 +68,7 @@ export class Standings {
       card.el.style.order = String(r.rank);
       card.pos.innerHTML = `${r.rank}<sup>${ordinalSuffix(r.rank)}</sup>`;
       card.lap.innerHTML = `${lap}<i> OF </i>${laps}`;
-      const ratio = health / MAX_HEALTH;
+      const ratio = health / r.maxHealth;
       card.bar.style.width = `${ratio * 100}%`;
       card.bar.style.backgroundColor = healthColor(ratio);
       card.el.classList.toggle('wrecked', r.destroyed);

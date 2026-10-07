@@ -2,7 +2,7 @@ import { NEUTRAL_INPUT, type DriveInput } from '../core/Input';
 import { clamp } from '../core/math';
 import type { Mine } from '../combat/Combat';
 import type { Pickup } from '../race/Pickups';
-import { MAX_HEALTH, type Racer } from '../race/Racer';
+import type { Racer } from '../race/Racer';
 import type { Track } from '../world/Track';
 
 export interface AIWorld {
@@ -74,7 +74,7 @@ export class AIDriver {
       const gap = wrapGap(item.along - car.trackAlong, track.length);
       if (gap < 8 || gap > 45) continue;
       const need =
-        (item.type === 'repair' && r.health < MAX_HEALTH * 0.6) ||
+        (item.type === 'repair' && r.health < r.maxHealth * 0.6) ||
         (item.type === 'ammo' && r.ammo < 50) ||
         (item.type === 'turbo' && r.turbo < 50) ||
         (item.type === 'mines' && r.mines < 2);

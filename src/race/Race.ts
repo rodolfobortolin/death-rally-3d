@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { AIDriver } from '../ai/AIDriver';
 import type { Sound } from '../audio/Sound';
+import { buildCar, carById, STOCK_UPGRADES, type CarUpgrades } from '../car/CarCatalog';
 import { DEFAULT_CAR_SPEC, type CarSpec } from '../car/CarPhysics';
 import { Combat } from '../combat/Combat';
 import { NEUTRAL_INPUT, type DriveInput, type Input } from '../core/Input';
@@ -20,6 +21,10 @@ export interface RaceConfig {
   withPlayer: boolean;
   /** Wrecked cars come back after a few seconds. Off by default: like the original, a wreck is out of the race. */
   respawn: boolean;
+  /** Player car id from the catalog. */
+  car: string;
+  /** Shop upgrades fitted to the player car. */
+  upgrades?: CarUpgrades;
 }
 
 export interface RaceResult {
@@ -97,7 +102,6 @@ export class Race {
     private readonly effects: Effects,
     private readonly sound: Sound,
     readonly config: RaceConfig,
-    playerSpec: CarSpec = DEFAULT_CAR_SPEC,
   ) {
     const onWall = (r: Racer, x: number, y: number, z: number, strength: number) => {
       this.effects.sparksBurst(this.tmp.set(x, y, z), Math.min(30, Math.floor(strength * 1.5)));
@@ -119,7 +123,10 @@ export class Race {
       this.drivers.set(racer, new AIDriver(racer));
     });
     if (config.withPlayer) {
-      const player = new Racer({ name: 'You', color: 0xc8201a, stripe: 0xf2f2f2, bodyType: 'muscle', number: 1, isPlayer: true, skill: 1 }, track, playerSpec, onWall);
+      const def = carById(config.car);
+      const { spec, maxHealth } = buildCar(def, config.upgrades ?? STOCK_UPGRADES);
+      const profile: RacerProfile = { name: 'You', color: def.color, stripe: def.stripe, bodyType: def.bodyType, number: def.number, isPlayer: true, skill: 1 };
+      const player = new Racer(profile, track, spec, onWall, maxHealth);
       this.racers.push(player);
       this.player = player;
       this.drivers.set(player, new AIDriver(player)); // takes over after the finish line

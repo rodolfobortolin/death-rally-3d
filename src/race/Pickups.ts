@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Sound } from '../audio/Sound';
 import type { Effects } from '../fx/Effects';
 import type { Track } from '../world/Track';
-import { MAX_HEALTH, MAX_TURBO, type Racer } from './Racer';
+import { MAX_TURBO, type Racer } from './Racer';
 
 export type PickupType = 'repair' | 'ammo' | 'turbo' | 'mines';
 
@@ -165,7 +165,7 @@ export class Pickups {
     item.timer = RESPAWN_TIME;
     switch (item.type) {
       case 'repair':
-        r.health = Math.min(MAX_HEALTH, r.health + 45);
+        r.health = Math.min(r.maxHealth, r.health + r.maxHealth * 0.45);
         break;
       case 'ammo':
         r.ammo += 60;
