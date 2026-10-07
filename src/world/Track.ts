@@ -1,5 +1,19 @@
 import * as THREE from 'three';
-import { createAsphaltTextures, createCheckerTexture, createConcreteTexture, createCurbTexture, createGroundTextures } from './textures';
+import { pathToPoints, trackById, DEFAULT_TRACK_ID, type TrackDefinition } from './tracks';
+import {
+  createAsphaltTextures,
+  createCheckerTexture,
+  createConcreteTexture,
+  createCurbTexture,
+  createDirtRoadTextures,
+  createFactoryFloorTextures,
+  createFactoryRoadTextures,
+  createGroundTextures,
+  createHazardTexture,
+  createJerseyTexture,
+  createRubbleEdgeTexture,
+  type SurfaceTextures,
+} from './textures';
 
 /** One sampled point of the track centerline, in the XZ plane. */
 export interface TrackSample {
@@ -26,31 +40,73 @@ export interface TrackQuery {
   sample: TrackSample;
 }
 
-export interface TrackDefinition {
-  name: string;
-  controlPoints: Array<[number, number]>;
-  roadHalfWidth: number;
-  curbWidth: number;
-  /** Distance from the centerline to the barrier face. */
-  wallOffset: number;
-}
-
-/** The first circuit: an industrial loop with a chicane and a long back straight. */
-export const DEFAULT_TRACK: TrackDefinition = {
-  name: 'Rust Yard',
-  controlPoints: [
-    [0, -120], [60, -125], [110, -100], [125, -50], [100, -10], [50, 0],
-    [30, 30], [60, 70], [120, 80], [140, 130], [100, 170], [20, 160],
-    [-40, 175], [-100, 150], [-120, 90], [-80, 50], [-110, 0], [-120, -60], [-80, -110],
-  ],
-  roadHalfWidth: 7,
-  curbWidth: 1.2,
-  wallOffset: 10.5,
-};
+export type { TrackDefinition } from './tracks';
 
 const SAMPLE_SPACING = 1.5;
-const BARRIER_HEIGHT = 1.1;
-const BARRIER_THICKNESS = 0.6;
+
+/** Barrier cross-sections as [distance outwards from the barrier face, height]. */
+const BARRIER_PROFILES = {
+  wall: [[0, 0], [0, 1.1], [0.6, 1.1], [0.6, 0]],
+  jersey: [[0, 0], [0, 0.28], [0.2, 0.85], [0.2, 1.05], [0.5, 1.05], [0.5, 0.85], [0.7, 0.28], [0.7, 0]],
+  hazard: [[0, 0], [0, 0.95], [0.08, 1.05], [0.62, 1.05], [0.7, 0.95], [0.7, 0]],
+} satisfies Record<string, Array<[number, number]>>;
+
+/** Everything about the track surface that changes with the theme. */
+interface TrackLook {
+  road: () => SurfaceTextures;
+  roadRoughness: number;
+  curb: () => THREE.Texture;
+  curbTile: number;
+  runoff: () => SurfaceTextures;
+  runoffColor: number;
+  runoffRepeat: [number, number];
+  barrier: () => THREE.Texture;
+  barrierColor: number;
+  barrierTile: number;
+  barrierProfile: Array<[number, number]>;
+}
+
+const LOOKS: Record<TrackDefinition['theme'], TrackLook> = {
+  yard: {
+    road: createAsphaltTextures,
+    roadRoughness: 0.88,
+    curb: createCurbTexture,
+    curbTile: 3,
+    runoff: createGroundTextures,
+    runoffColor: 0xc8bba4,
+    runoffRepeat: [0.1, 0.25],
+    barrier: createConcreteTexture,
+    barrierColor: 0xd8d2c4,
+    barrierTile: 4,
+    barrierProfile: BARRIER_PROFILES.wall,
+  },
+  quarry: {
+    road: createDirtRoadTextures,
+    roadRoughness: 0.97,
+    curb: createRubbleEdgeTexture,
+    curbTile: 2,
+    runoff: createGroundTextures,
+    runoffColor: 0xd8c4a0,
+    runoffRepeat: [0.1, 0.25],
+    barrier: createJerseyTexture,
+    barrierColor: 0xe0dcd2,
+    barrierTile: 3,
+    barrierProfile: BARRIER_PROFILES.jersey,
+  },
+  warehouse: {
+    road: createFactoryRoadTextures,
+    roadRoughness: 0.55,
+    curb: createHazardTexture,
+    curbTile: 1.6,
+    runoff: createFactoryFloorTextures,
+    runoffColor: 0x9a968e,
+    runoffRepeat: [0.37, 1],
+    barrier: createHazardTexture,
+    barrierColor: 0xffffff,
+    barrierTile: 2,
+    barrierProfile: BARRIER_PROFILES.hazard,
+  },
+};
 
 export class Track {
   readonly def: TrackDefinition;
@@ -58,10 +114,11 @@ export class Track {
   readonly length: number;
   readonly group = new THREE.Group();
 
-  constructor(def: TrackDefinition = DEFAULT_TRACK) {
+  constructor(def: TrackDefinition = trackById(DEFAULT_TRACK_ID)) {
     this.def = def;
+    const points = def.path ? pathToPoints(def.path) : (def.controlPoints ?? []);
     const curve = new THREE.CatmullRomCurve3(
-      def.controlPoints.map(([x, z]) => new THREE.Vector3(x, 0, z)),
+      points.map(([x, z]) => new THREE.Vector3(x, 0, z)),
       true,
       'centripetal',
     );
@@ -182,33 +239,36 @@ export class Track {
     return g;
   }
 
-  /** Builds a solid barrier (inner face, top and outer face) centered at a lateral offset. */
-  private buildBarrier(offset: number, side: 1 | -1): THREE.BufferGeometry {
+  /**
+   * Builds a solid barrier along one side from a cross-section profile. U runs along
+   * the track in `tile` meter blocks, V across the profile.
+   */
+  private buildBarrier(side: 1 | -1, profile: Array<[number, number]>, tile: number): THREE.BufferGeometry {
     const n = this.samples.length;
-    const inner = offset - (side * BARRIER_THICKNESS) / 2;
-    const outer = offset + (side * BARRIER_THICKNESS) / 2;
-    // Cross-section profile, walked from the track side to the outside.
-    const profile: Array<[number, number]> = [
-      [inner, 0],
-      [inner, BARRIER_HEIGHT],
-      [outer, BARRIER_HEIGHT],
-      [outer, 0],
-    ];
+    const wall = this.def.wallOffset;
     const positions: number[] = [];
     const uvs: number[] = [];
     const indices: number[] = [];
-    const vTotal = Math.max(1, Math.round(this.length / 4));
+    const uTotal = Math.max(1, Math.round(this.length / tile));
+    // V follows the length of the outline so textures are not stretched on slopes.
+    const lengths = [0];
+    for (let p = 1; p < profile.length; p++) {
+      lengths.push(lengths[p - 1] + Math.hypot(profile[p][0] - profile[p - 1][0], profile[p][1] - profile[p - 1][1]));
+    }
+    const perimeter = lengths[lengths.length - 1];
     let vert = 0;
     for (let p = 0; p < profile.length - 1; p++) {
-      const [o0, y0] = profile[p];
-      const [o1, y1] = profile[p + 1];
+      const [d0, y0] = profile[p];
+      const [d1, y1] = profile[p + 1];
+      const o0 = side * (wall + d0);
+      const o1 = side * (wall + d1);
       const base = vert;
       for (let i = 0; i <= n; i++) {
         const s = this.samples[i % n];
-        const v = (i / n) * vTotal;
+        const u = (i / n) * uTotal;
         positions.push(s.x + s.rx * o0, y0, s.z + s.rz * o0);
         positions.push(s.x + s.rx * o1, y1, s.z + s.rz * o1);
-        uvs.push(v, p === 1 ? 0.9 : 0, v, p === 1 ? 1 : 1);
+        uvs.push(u, lengths[p] / perimeter, u, lengths[p + 1] / perimeter);
         vert += 2;
       }
       for (let i = 0; i < n; i++) {
@@ -231,51 +291,54 @@ export class Track {
 
   private buildMeshes(): void {
     const { roadHalfWidth: hw, curbWidth: cw, wallOffset: wo } = this.def;
+    const look = LOOKS[this.def.theme];
 
-    const asphalt = createAsphaltTextures();
+    const roadTex = look.road();
     const road = new THREE.Mesh(
       this.buildStrip(-hw, hw, 0.03, hw * 2),
       new THREE.MeshStandardMaterial({
-        map: asphalt.map,
-        normalMap: asphalt.normalMap,
+        map: roadTex.map,
+        normalMap: roadTex.normalMap,
         normalScale: new THREE.Vector2(0.6, 0.6),
-        roughness: 0.88,
+        roughness: look.roadRoughness,
         metalness: 0.0,
       }),
     );
     road.receiveShadow = true;
     this.group.add(road);
 
-    const curbTex = createCurbTexture();
-    const curbMat = new THREE.MeshStandardMaterial({ map: curbTex, roughness: 0.7 });
+    const curbMat = new THREE.MeshStandardMaterial({ map: look.curb(), roughness: 0.7 });
     for (const [a, b] of [[-hw - cw, -hw], [hw, hw + cw]]) {
-      const curb = new THREE.Mesh(this.buildStrip(a, b, 0.06, 3), curbMat);
+      const curb = new THREE.Mesh(this.buildStrip(a, b, 0.06, look.curbTile), curbMat);
       curb.receiveShadow = true;
       this.group.add(curb);
     }
 
-    // Gravel run-off between the curbs and the barriers.
-    const gravelTex = createGroundTextures();
-    gravelTex.map.repeat.set(0.1, 0.25);
-    gravelTex.normalMap.repeat.set(0.1, 0.25);
-    const gravelMat = new THREE.MeshStandardMaterial({ color: 0xc8bba4, roughness: 1, map: gravelTex.map, normalMap: gravelTex.normalMap });
+    // Run-off area between the curbs and the barriers.
+    const runoffTex = look.runoff();
+    runoffTex.map.repeat.set(...look.runoffRepeat);
+    runoffTex.normalMap.repeat.set(...look.runoffRepeat);
+    const runoffMat = new THREE.MeshStandardMaterial({ color: look.runoffColor, roughness: 1, map: runoffTex.map, normalMap: runoffTex.normalMap });
     for (const [a, b] of [[-wo, -hw - cw], [hw + cw, wo]]) {
-      const gravel = new THREE.Mesh(this.buildStrip(a, b, 0.02, 6), gravelMat);
-      gravel.receiveShadow = true;
-      this.group.add(gravel);
+      const runoff = new THREE.Mesh(this.buildStrip(a, b, 0.02, 6), runoffMat);
+      runoff.receiveShadow = true;
+      this.group.add(runoff);
     }
 
-    const concrete = createConcreteTexture();
-    const barrierMat = new THREE.MeshStandardMaterial({ map: concrete, roughness: 0.85, color: 0xd8d2c4 });
+    const barrierMat = new THREE.MeshStandardMaterial({ map: look.barrier(), roughness: 0.85, color: look.barrierColor });
     for (const side of [-1, 1] as const) {
-      const offset = side * (wo + BARRIER_THICKNESS / 2);
-      const barrier = new THREE.Mesh(this.buildBarrier(offset, side), barrierMat);
+      const barrier = new THREE.Mesh(this.buildBarrier(side, look.barrierProfile, look.barrierTile), barrierMat);
       barrier.castShadow = true;
       barrier.receiveShadow = true;
       this.group.add(barrier);
     }
 
     this.buildStartLine();
+  }
+
+  /** Frees GPU memory for every mesh, material and texture of the track. */
+  dispose(): void {
+    disposeObject(this.group);
   }
 
   private buildStartLine(): void {
@@ -317,5 +380,21 @@ export class Track {
     gantry.position.set(s.x, 0, s.z);
     gantry.rotation.y = heading;
     this.group.add(gantry);
+  }
+}
+
+/** Disposes geometries, materials and their textures below `root`. */
+export function disposeObject(root: THREE.Object3D): void {
+  const materials = new Set<THREE.Material>();
+  root.traverse((o) => {
+    if (o instanceof THREE.Mesh || o instanceof THREE.Points || o instanceof THREE.Line) {
+      o.geometry.dispose();
+      const m = o.material as THREE.Material | THREE.Material[];
+      for (const mat of Array.isArray(m) ? m : [m]) materials.add(mat);
+    }
+  });
+  for (const mat of materials) {
+    for (const value of Object.values(mat)) if (value instanceof THREE.Texture) value.dispose();
+    mat.dispose();
   }
 }

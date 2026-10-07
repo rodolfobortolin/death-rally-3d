@@ -194,6 +194,7 @@ export class Combat {
     if (victim.destroyed || victim.invulnerable > 0 || amount <= 0) return;
     victim.health -= amount;
     if (source && source !== victim) victim.lastAttacker = source;
+    if (source?.isPlayer && source !== victim) victim.hitByPlayer = 3;
     if (victim.health <= 0) this.wreck(victim);
   }
 

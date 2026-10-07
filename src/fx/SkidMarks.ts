@@ -52,6 +52,14 @@ export class SkidMarks {
     this.mesh.renderOrder = 1;
   }
 
+  /** Erases every mark (used when the track changes). */
+  clear(): void {
+    this.alphas.fill(0);
+    (this.geometry.attributes.alpha as THREE.BufferAttribute).needsUpdate = true;
+    this.last.clear();
+    this.cursor = 0;
+  }
+
   /** Adds a mark for `wheelId` at `point`; pass `active=false` to lift the tire. */
   update(wheelId: string, point: THREE.Vector3, active: boolean, intensity = 0.55): void {
     const prev = this.last.get(wheelId) ?? null;

@@ -4,6 +4,7 @@
   --panel: rgba(12, 10, 8, 0.72);
   --border: rgba(255, 170, 40, 0.35);
   --display: 'Black Ops One', Impact, 'Arial Black', sans-serif;
+  --hud: 'Orbitron', 'Rajdhani', sans-serif;
   --ui: 'Rajdhani', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,82 +21,36 @@ body { font-family: var(--ui); color: #fff; }
   border: 1px solid var(--border);
   text-shadow: 0 1px 2px #000;
 }
-/* Left sidebar modelled on the original game: player card on top, one card per rival. */
-.sidebar {
-  position: absolute; left: 0; top: 0; bottom: 0; width: 232px; padding: 10px 8px;
-  display: flex; flex-direction: column; gap: 6px; overflow: hidden;
-  background: linear-gradient(90deg, rgba(8, 7, 6, 0.85), rgba(8, 7, 6, 0.55));
-  border-right: 1px solid rgba(255, 170, 40, 0.25);
-}
-.card { flex-shrink: 0; border-radius: 4px; overflow: hidden; background: linear-gradient(180deg, #2a2723, #161411); border: 1px solid #000; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
-.card-head {
-  font-family: var(--display); font-size: 17px; letter-spacing: 1px; padding: 2px 8px;
-  background: var(--car-color, #b0261a); color: #fff; text-shadow: 0 1px 0 #000, 0 0 4px rgba(0,0,0,0.6);
-  display: flex; justify-content: space-between; align-items: center;
-}
-.player-card { padding-bottom: 6px; }
-.player-card .card-head { background: linear-gradient(90deg, #8a1810, #d8401a); }
-.gauge-wrap { position: relative; height: 92px; margin: 4px 8px 0; background: radial-gradient(ellipse at 50% 100%, #12302a, #050a09 75%); border-radius: 6px 6px 2px 2px; }
-.gauge-wrap canvas { width: 100%; height: 100%; display: block; }
-.gauge-readout { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; line-height: 1; }
-.gauge-readout b { font-family: var(--display); font-size: 24px; color: #e8ffe8; font-variant-numeric: tabular-nums; }
-.gauge-readout small { display: block; font-size: 10px; letter-spacing: 2px; color: #8fd8a8; }
-.turbo-row { display: grid; grid-template-columns: 10px 1fr 10px; gap: 6px; align-items: center; margin: 4px 8px; font-size: 11px; font-weight: 700; color: #8fd8a8; }
-.turbo-row .hud-bar { margin: 0; height: 8px; }
-.portrait { position: relative; margin: 4px 8px; height: 92px; border-radius: 4px; overflow: hidden; background: #0d0b09; border: 1px solid #000; }
-.portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .damage-tint { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, rgba(255, 40, 10, 0.75), rgba(120, 0, 0, 0.6)); mix-blend-mode: multiply; opacity: 0; transition: opacity 0.2s; }
-.damage-label { position: absolute; left: 6px; bottom: 3px; font-family: var(--display); font-size: 13px; color: #ff4a2a; text-shadow: 0 1px 0 #000; }
-.damage-label b { color: #fff; font-size: 16px; margin-left: 4px; }
-.card-row { display: flex; gap: 6px; margin: 4px 8px 0; align-items: stretch; }
-.lap-box { flex: 1; background: #0d0b09; border-radius: 3px; padding: 2px 8px; display: flex; flex-direction: column; justify-content: center; }
-.lap-box small, .rival-lap small { font-size: 11px; letter-spacing: 1px; color: #aaa; font-weight: 700; }
-.lap-box b { font-family: var(--display); font-size: 22px; line-height: 1.05; }
-.lap-box i, .rival-lap i { font-style: normal; font-size: 12px; color: #aaa; }
-.pos-box {
-  width: 74px; display: flex; align-items: center; justify-content: center; border-radius: 4px;
-  font-family: var(--display); font-size: 30px; color: #fff; background: linear-gradient(180deg, #4a4640, #1a1815); border: 1px solid #000;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
-}
-.pos-box sup, .rival-pos sup { font-size: 0.5em; }
-.ammo-row, .time-row { display: flex; justify-content: space-between; margin: 5px 8px 0; font-size: 13px; font-weight: 700; }
-.ammo-row b { font-size: 17px; margin-left: 2px; font-variant-numeric: tabular-nums; }
-.time-row { font-size: 12px; color: #bbb; }
-.time-row b { color: #fff; font-variant-numeric: tabular-nums; }
 
-.rivals { display: flex; flex-direction: column; gap: 6px; }
-.rival-card .card-head { font-size: 15px; }
-.rival-card .card-head small { font-family: var(--ui); font-weight: 700; font-size: 12px; }
-.rival-body { display: grid; grid-template-columns: 62px 1fr 52px; gap: 6px; align-items: center; padding: 4px 6px; }
-.rival-body .mini { position: relative; width: 62px; height: 38px; border-radius: 3px; overflow: hidden; background: #0d0b09; }
-.rival-body .mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.rival-lap { white-space: nowrap; }
-.rival-lap small { font-size: 10px; }
-.rival-lap b { font-family: var(--display); font-size: 15px; }
-.rival-lap i { font-size: 10px; }
-.sidebar.compact .rival-body { padding: 2px 6px; }
-.sidebar.compact .rival-body .mini, .sidebar.compact .rival-pos { height: 26px; }
-.sidebar.compact .card-head { font-size: 13px; padding: 1px 8px; }
-.rival-lap .hud-bar { height: 6px; margin: 3px 0 0; }
-.rival-pos { height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-family: var(--display); font-size: 20px; background: linear-gradient(180deg, #4a4640, #1a1815); border: 1px solid #000; }
-.rival-card.wrecked .mini img { filter: grayscale(1) brightness(0.4); }
-.rival-card.wrecked .card-head small { color: #ffdd55; }
+/* Top row, modelled on the 2012 remake: position, condition + time, lap. */
+.hud-top { position: absolute; top: 22px; left: 5vw; right: 5vw; display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; }
+.hud-stat { font-family: var(--hud); color: #fff; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85), 0 0 2px #000; line-height: 1; }
+.hud-stat.center { text-align: center; }
+.hud-stat.right { text-align: right; }
+.hud-stat small { display: block; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+.hud-big { margin-top: 4px; white-space: nowrap; }
+.hud-big b { font-size: 64px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hud-big sup { font-size: 28px; font-weight: 500; vertical-align: 26px; margin-left: 2px; }
+.hud-stat.center .hud-big b { font-size: 54px; }
+.hud-stat.center .hud-big sup { font-size: 24px; vertical-align: 22px; }
+.hud-big.warn b { color: #ffc040; }
+.hud-big.crit b { color: #ff4a2a; animation: dock-blink 0.8s steps(2) infinite; }
+.hud-time { margin-top: 10px; font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .tags { position: absolute; inset: 0; overflow: hidden; }
 .tag {
   position: absolute; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none;
-  font-family: var(--display); font-size: 13px; letter-spacing: 1px; padding: 1px 8px 2px; color: #fff;
-  background: rgba(10, 8, 6, 0.75); border-bottom: 3px solid var(--car-color, #fff); text-shadow: 0 1px 0 #000;
+  font-family: var(--display); font-size: 13px; letter-spacing: 1px; color: #fff; text-shadow: 0 1px 0 #000;
   transition: opacity 0.3s;
 }
-.tag.player { background: linear-gradient(90deg, #b0261a, #e05020); border-bottom-color: #ffb23f; }
 
 .hud-minimap {
-  position: absolute; top: 16px; right: 16px; width: 220px; height: 220px; border-radius: 8px;
+  position: absolute; left: 22px; bottom: 22px; width: 190px; height: 190px; border-radius: 8px;
   background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border);
 }
 .hud-minimap canvas { width: 100%; height: 100%; display: block; }
-.hud-feed { position: absolute; top: 248px; right: 16px; width: 260px; text-align: right; }
+.hud-feed { position: absolute; top: 150px; right: 5vw; width: 280px; text-align: right; }
 .hud-feed div { margin-bottom: 4px; }
 .hud-feed span {
   font-size: 15px; font-weight: 700; padding: 3px 8px; display: inline-block;
@@ -127,7 +82,7 @@ body { font-family: var(--ui); color: #fff; }
 
 /* ---------------- FPS counter ---------------- */
 .fps {
-  position: fixed; right: 12px; bottom: 10px; z-index: 50; pointer-events: none;
+  position: fixed; left: 22px; bottom: 222px; z-index: 50; pointer-events: none;
   padding: 3px 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.6);
   font: 700 13px/1.2 var(--ui); letter-spacing: 1px; font-variant-numeric: tabular-nums; color: #7dff8a;
 }
@@ -166,6 +121,9 @@ h2 { font-family: var(--display); font-weight: 400; font-size: 40px; color: var(
   padding: 6px 10px; background: rgba(0, 0, 0, 0.4); border-radius: 4px; font-weight: 700; letter-spacing: 2px;
 }
 .option b { text-align: center; color: var(--accent); font-size: 18px; }
+.option.track-option { grid-template-columns: 70px 34px 1fr 34px; border: 1px solid var(--border); }
+.option.track-option b { font-family: var(--display); font-size: 17px; letter-spacing: 1px; white-space: nowrap; }
+.track-info { margin: -3px 2px 2px; font-size: 13px; color: #cfc6b8; letter-spacing: 0.5px; min-height: 16px; }
 .opt-btn { font-size: 22px; color: #fff; background: none; border: none; cursor: pointer; line-height: 1; }
 .opt-btn:hover { color: var(--accent); }
 .garage {
@@ -206,15 +164,79 @@ h2 { font-family: var(--display); font-weight: 400; font-size: 40px; color: var(
 .dot.repair { background: #40ff70; } .dot.ammo { background: #ffc830; } .dot.turbo { background: #40a0ff; } .dot.mines { background: #ff4030; }
 
 @media (max-height: 760px) {
-  .gauge-wrap { height: 72px; }
-  .portrait { height: 70px; }
-  .rival-body { padding: 2px 6px; }
-  .rival-body .mini, .rival-pos { height: 30px; }
+  .hud-big b { font-size: 48px; }
+  .hud-stat.center .hud-big b { font-size: 42px; }
+  .hud-stat small { font-size: 18px; }
+  .hud-time { font-size: 24px; }
 }
 @media (max-width: 760px) {
-  .sidebar { width: 180px; }
   .hud-minimap { width: 140px; height: 140px; }
-  .hud-feed { top: 166px; }
+  .ammo-bars i { width: 7px; }
   .hud-banner { font-size: 56px; }
   #menu { padding-left: 16px; }
 }
+
+/* ---------------- Bottom-right dock (gun, driver, mines, turbo) ---------------- */
+.hud-dock { position: absolute; right: 4vw; bottom: 22px; display: flex; align-items: center; gap: 14px; }
+.dock-main, .dock-side {
+  display: flex; align-items: center; gap: 12px; height: 58px; padding: 0 16px;
+  background: linear-gradient(180deg, rgba(34, 34, 36, 0.92), rgba(12, 12, 13, 0.92));
+  border: 1px solid rgba(0, 0, 0, 0.9); border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 14px rgba(0, 0, 0, 0.5);
+  font-family: var(--hud);
+}
+.dock-count { font-size: 26px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 #000; min-width: 34px; text-align: right; }
+.ammo-count { min-width: 50px; }
+.dock-icon { width: 36px; height: 36px; flex-shrink: 0; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)); }
+.dock-item { display: flex; align-items: center; gap: 10px; }
+.dock-item.low .dock-count, .dock-side.low .dock-count, .dock-main.low .ammo-count { color: #ff4a2a; animation: dock-blink 0.8s steps(2) infinite; }
+@keyframes dock-blink { 50% { opacity: 0.35; } }
+
+/* Machine gun magazine: slanted bars that drain from the left as bullets are fired. */
+.ammo-bars { display: flex; gap: 5px; height: 34px; align-items: flex-end; }
+.ammo-bars i { position: relative; width: 12px; height: 100%; transform: skewX(-20deg); background: rgba(255, 255, 255, 0.07); border-radius: 1px; }
+.ammo-bars i::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+  background: repeating-linear-gradient(180deg, #ffffff 0 3px, #cfcfcf 3px 4px); box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+  transition: height 0.12s linear;
+}
+
+.dock-portrait { position: relative; width: 66px; height: 74px; margin-top: -18px; border: 2px solid #8a8a8a; border-radius: 3px; overflow: hidden; background: #0d0b09; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6); }
+.dock-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dock-skull { position: absolute; right: 2px; bottom: 2px; width: 16px; height: 16px; filter: drop-shadow(0 1px 1px #000); }
+
+.turbo-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.dock-tank { width: 48px; height: 5px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.dock-tank-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff3a1a, #ffb040); transition: width 0.15s linear; }
+
+/* ---------------- Rival damage bubble over the cars ---------------- */
+.tag { display: flex; flex-direction: column; align-items: center; }
+.tag-name {
+  padding: 1px 8px 2px; background: rgba(10, 8, 6, 0.75); border-bottom: 3px solid var(--car-color, #fff);
+  transition: opacity 0.3s;
+}
+.tag.player .tag-name { background: linear-gradient(90deg, #b0261a, #e05020); border-bottom-color: #ffb23f; }
+.tag-hp {
+  position: relative; margin-bottom: 7px; padding: 4px 5px; border-radius: 4px;
+  background: rgba(14, 12, 10, 0.88); border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  opacity: 0; transform: translateY(4px) scale(0.9); transition: opacity 0.35s, transform 0.35s;
+}
+.tag-hp::after {
+  content: ''; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%);
+  border: 6px solid transparent; border-top-color: rgba(14, 12, 10, 0.88); border-bottom: 0;
+}
+.tag-hp.show { opacity: 1; transform: none; }
+.tag-hp-track { width: 74px; height: 9px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; overflow: hidden; }
+.tag-hp-fill {
+  height: 100%; width: 100%; background: #4cd160;
+  /* Segment gaps so it reads as an armor meter. */
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 6.4px, transparent 6.4px 7.4px);
+  mask: repeating-linear-gradient(90deg, #000 0 6.4px, transparent 6.4px 7.4px);
+  transition: background-color 0.3s;
+}
+.tag-hp.warn .tag-hp-fill { background: #ffc030; }
+.tag-hp.crit .tag-hp-fill { background: #ff3a1a; }
+.tag-hp.hit { border-color: #fff; box-shadow: 0 0 12px rgba(255, 220, 160, 0.8); }
+.tag-hp.crit { animation: hp-crit 0.7s ease-in-out infinite; }
+@keyframes hp-crit { 50% { border-color: #ff3a1a; box-shadow: 0 0 12px rgba(255, 40, 10, 0.7); } }

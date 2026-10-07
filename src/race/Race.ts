@@ -218,6 +218,7 @@ export class Race {
     };
 
     for (const r of this.racers) {
+      if (r.hitByPlayer > 0) r.hitByPlayer = Math.max(0, r.hitByPlayer - dt);
       let cmd: DriveInput;
       if (!racing || r.destroyed) {
         cmd = NEUTRAL_INPUT;

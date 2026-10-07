@@ -11,9 +11,9 @@ import { Menu, type MenuAction } from '../ui/Menu';
 import { Minimap } from '../ui/Minimap';
 import { renderCarPortrait } from '../ui/Portraits';
 import { NameTags } from '../ui/NameTags';
-import { Standings } from '../ui/Standings';
 import { Environment } from '../world/Environment';
 import { Track } from '../world/Track';
+import { trackById } from '../world/tracks';
 import { FollowCamera } from './FollowCamera';
 import { Input, NEUTRAL_INPUT } from './Input';
 import { Renderer } from './Renderer';
@@ -31,15 +31,14 @@ export class Game {
   private readonly input = new Input();
   private readonly cameraRig: FollowCamera;
   private readonly renderer: Renderer;
-  private readonly track: Track;
-  private readonly environment: Environment;
+  private track: Track;
+  private environment: Environment;
   private readonly effects = new Effects();
   private readonly sound = new Sound();
   private readonly hud = new Hud();
   private readonly fps = new FpsCounter();
   private readonly menu = new Menu();
   private readonly minimap: Minimap;
-  private readonly standings = new Standings();
   private readonly nameTags = new NameTags();
   private readonly timer = new THREE.Timer();
   private race: Race | null = null;
@@ -61,7 +60,7 @@ export class Game {
     this.cameraRig = new FollowCamera(window.innerWidth / window.innerHeight);
     this.renderer = new Renderer(container, this.scene, this.cameraRig.camera);
 
-    this.track = new Track();
+    this.track = new Track(trackById(this.menu.settings.track));
     this.scene.add(this.track.group);
     this.environment = new Environment(this.scene, this.track, this.renderer.webgl);
     this.scene.add(this.environment.group, this.effects.group);
@@ -74,6 +73,10 @@ export class Game {
     };
     this.menu.onSettingsChange = (s) => {
       this.sound.setMuted(!s.sound);
+      if (s.track !== this.track.def.id && this.state === 'menu') {
+        this.loadTrack(s.track);
+        this.enterMenu();
+      }
       this.applyGraphics();
     };
     this.sound.setMuted(!this.menu.settings.sound);
@@ -103,6 +106,24 @@ export class Game {
     }
     this.previewsPending = false;
     this.menu.setCarPreviews(previews);
+  }
+
+  /** Swaps the circuit and its scenery. The current race must be restarted afterwards. */
+  private loadTrack(id: string): void {
+    if (this.race) {
+      this.scene.remove(this.race.group);
+      this.race.dispose();
+      this.race = null;
+    }
+    this.scene.remove(this.track.group);
+    this.track.dispose();
+    this.environment.dispose();
+    this.effects.clear();
+    this.track = new Track(trackById(id));
+    this.scene.add(this.track.group);
+    this.environment = new Environment(this.scene, this.track, this.renderer.webgl);
+    this.scene.add(this.environment.group);
+    this.minimap.setTrack(this.track);
   }
 
   start(): void {
@@ -173,9 +194,7 @@ export class Game {
     this.race = race;
     this.scene.add(race.group);
     if (config.withPlayer) {
-      const portraits = new Map(race.racers.map((r) => [r, renderCarPortrait(this.renderer.webgl, r.car.object, this.scene.environment) ?? ''] as const));
-      this.standings.build(race, portraits);
-      if (race.player) this.hud.setPortrait(portraits.get(race.player) ?? '');
+      if (race.player) this.hud.setPortrait(renderCarPortrait(this.renderer.webgl, race.player.car.object, this.scene.environment) ?? '');
       this.nameTags.build(race);
     }
     const f = race.focus.car.physics;
@@ -199,7 +218,6 @@ export class Game {
     this.cameraRig.mode = 'classic';
     this.setRace(config);
     this.hud.setVisible(true);
-    this.hudInset = (document.querySelector('.sidebar') as HTMLElement | null)?.offsetWidth ?? 0;
     this.onResize();
     this.menu.show(null);
     this.sound.playMusic('race-theme');
@@ -308,7 +326,6 @@ export class Game {
       if (this.state === 'racing') {
         this.hud.update(race);
         this.minimap.draw(race);
-        this.standings.update(race);
         this.nameTags.update(race, this.cameraRig.camera, window.innerWidth, window.innerHeight);
       }
     }

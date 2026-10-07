@@ -145,6 +145,12 @@ export class Effects {
     this.onExplosion(pos, scale);
   }
 
+  /** Removes marks left on the ground, for when the track changes. */
+  clear(): void {
+    this.skids.clear();
+    for (const m of this.scorchMarks) m.visible = false;
+  }
+
   scorch(pos: THREE.Vector3, size: number): void {
     const m = this.scorchMarks[this.scorchCursor];
     this.scorchCursor = (this.scorchCursor + 1) % MAX_SCORCH;

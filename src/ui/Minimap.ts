@@ -7,12 +7,17 @@ const PICKUP_COLORS: Record<string, string> = { repair: '#40ff70', ammo: '#ffc83
 export class Minimap {
   private readonly canvas = document.getElementById('minimap') as HTMLCanvasElement;
   private readonly ctx = this.canvas.getContext('2d')!;
-  private readonly background: HTMLCanvasElement;
+  private readonly background = document.createElement('canvas');
   private scale = 1;
   private offsetX = 0;
   private offsetZ = 0;
 
   constructor(track: Track) {
+    this.setTrack(track);
+  }
+
+  /** Fits the map to a track and pre-renders its outline. */
+  setTrack(track: Track): void {
     const size = this.canvas.width;
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (const s of track.samples) {
@@ -25,9 +30,9 @@ export class Minimap {
     this.offsetZ = pad + ((size - pad * 2) - (maxZ - minZ) * this.scale) / 2 - minZ * this.scale;
 
     // Pre-render the track outline once.
-    this.background = document.createElement('canvas');
     this.background.width = this.background.height = size;
     const b = this.background.getContext('2d')!;
+    b.clearRect(0, 0, size, size);
     const path = () => {
       b.beginPath();
       track.samples.forEach((s, i) => {

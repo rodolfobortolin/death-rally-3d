@@ -1,6 +1,7 @@
 import { CARS, carById, DEFAULT_CAR_ID, effectiveStats, FULL_UPGRADES, TIER_NAMES, type CarStats } from '../car/CarCatalog';
 import type { GraphicsQuality } from '../core/Renderer';
 import type { Difficulty, RaceConfig, RaceResult } from '../race/Race';
+import { DEFAULT_TRACK_ID, TRACKS, trackById } from '../world/tracks';
 import { formatTime } from './Hud';
 
 export type MenuAction = 'start' | 'resume' | 'restart' | 'quit';
@@ -13,6 +14,7 @@ export interface Settings {
   sound: boolean;
   respawn: boolean;
   car: string;
+  track: string;
   graphics: GraphicsQuality;
   /** Frame rate limit during races; 0 = follow the display refresh rate. */
   frameCap: number;
@@ -27,6 +29,7 @@ const OPTIONS = {
   graphics: ['low', 'medium', 'high'] as GraphicsQuality[],
   frameCap: [60, 30, 0],
   car: CARS.map((c) => c.id),
+  track: TRACKS.map((t) => t.id),
 };
 
 const STAT_LABELS: Array<[keyof CarStats, string]> = [
@@ -39,7 +42,7 @@ const STAT_LABELS: Array<[keyof CarStats, string]> = [
 const STORAGE_KEY = 'death-rally-3d.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true, respawn: false, car: DEFAULT_CAR_ID, graphics: 'medium', frameCap: 60 };
+  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true, respawn: false, car: DEFAULT_CAR_ID, track: DEFAULT_TRACK_ID, graphics: 'medium', frameCap: 60 };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return { ...defaults, ...(JSON.parse(raw) as Partial<Settings>) };
@@ -136,11 +139,15 @@ export class Menu {
       const v = this.settings[key];
       if (key === 'sound' || key === 'respawn') return v ? 'ON' : 'OFF';
       if (key === 'frameCap') return v ? `${v} FPS` : 'OFF';
+      if (key === 'track') return trackById(String(v)).name.toUpperCase();
       return String(v).toUpperCase();
     };
     document.querySelectorAll<HTMLElement>('[data-option]').forEach((row) => {
       row.querySelector('[data-value]')!.textContent = label(row.dataset.option as keyof Settings);
     });
+    const track = trackById(this.settings.track);
+    const index = TRACKS.indexOf(track) + 1;
+    document.getElementById('track-info')!.textContent = `${index}/${TRACKS.length} · ${track.subtitle}`;
     this.renderGarage();
   }
 

@@ -1,5 +1,5 @@
 import type { Race } from '../race/Race';
-import { MAX_TURBO } from '../race/Racer';
+import { MAX_TURBO, START_AMMO } from '../race/Racer';
 
 export const formatTime = (seconds: number): string => {
   const m = Math.floor(seconds / 60);
@@ -7,38 +7,48 @@ export const formatTime = (seconds: number): string => {
   return `${m}:${s.toFixed(3).padStart(6, '0')}`;
 };
 
-export const ordinalSuffix = (n: number): string => {
-  const suffix = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return suffix[(v - 20) % 10] ?? suffix[v] ?? suffix[0];
-};
-
 const el = (id: string) => document.getElementById(id)!;
 
-/** Speed in km/h at the right end of the gauge. */
-const GAUGE_MAX = 200;
+/** Bars in the machine-gun magazine; each holds an equal share of a full load. */
+const AMMO_BARS = 12;
 
-/** Player card (gauge, turbo, damage portrait, lap, position, ammo), banners and kill feed. */
+/** Race clock as m:ss:cc, like the remake's HUD. */
+const formatClock = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  const cs = Math.floor((seconds * 100) % 100);
+  return `${m}:${String(s).padStart(2, '0')}:${String(cs).padStart(2, '0')}`;
+};
+
+/** Top row (position, condition, time, lap), bottom-right dock, banners and kill feed. */
 export class Hud {
   private readonly root = el('hud');
-  private readonly speed = el('hud-speed');
-  private readonly gauge = el('hud-gauge') as HTMLCanvasElement;
-  private readonly gaugeCtx = this.gauge.getContext('2d')!;
-  private readonly turbo = el('hud-turbo');
-  private readonly portrait = el('hud-portrait') as HTMLImageElement;
-  private readonly damageTint = el('hud-damage-tint');
-  private readonly damage = el('hud-damage');
+  private readonly pos = el('hud-pos');
+  private readonly total = el('hud-total');
+  private readonly condition = el('hud-condition');
+  private readonly conditionBox = el('hud-condition-box');
+  private readonly time = el('hud-time');
   private readonly lap = el('hud-lap');
   private readonly laps = el('hud-laps');
-  private readonly pos = el('hud-pos');
   private readonly ammo = el('hud-ammo');
+  private readonly ammoBars: HTMLElement[];
+  private readonly dockMain = document.querySelector('.dock-main') as HTMLElement;
   private readonly mines = el('hud-mines');
-  private readonly time = el('hud-time');
-  private readonly best = el('hud-best');
+  private readonly minesCell = el('hud-mines-cell');
+  private readonly turbo = el('hud-turbo');
+  private readonly turboNum = el('hud-turbo-num');
+  private readonly turboCell = el('hud-turbo-cell');
+  private readonly portrait = el('hud-portrait') as HTMLImageElement;
+  private readonly damageTint = el('hud-damage-tint');
   private readonly banner = el('hud-banner');
   private readonly feed = el('hud-feed');
   private readonly cache = new Map<HTMLElement, string>();
-  private gaugeSpeed = -1;
+  private readonly classCache = new Map<string, boolean>();
+
+  constructor() {
+    const bars = el('hud-ammo-bars');
+    this.ammoBars = Array.from({ length: AMMO_BARS }, () => bars.appendChild(document.createElement('i')));
+  }
 
   setVisible(visible: boolean): void {
     this.root.classList.toggle('hidden', !visible);
@@ -50,92 +60,60 @@ export class Hud {
   }
 
   /** Only touches the DOM when a value actually changes. */
-  private set(node: HTMLElement, value: string, html = false): void {
+  private set(node: HTMLElement, value: string): void {
     if (this.cache.get(node) === value) return;
     this.cache.set(node, value);
-    if (html) node.innerHTML = value;
-    else node.textContent = value;
+    node.textContent = value;
   }
 
-  private setStyle(node: HTMLElement, prop: 'width' | 'opacity', value: string): void {
+  private setStyle(node: HTMLElement, prop: string, value: string): void {
     const key = `${prop}:${value}`;
     if (this.cache.get(node) === key) return;
     this.cache.set(node, key);
-    node.style[prop] = value;
+    node.style.setProperty(prop, value);
+  }
+
+  private setClass(node: HTMLElement, name: string, on: boolean): void {
+    const key = `${node.id || node.className}|${name}`;
+    if (this.classCache.get(key) === on) return;
+    this.classCache.set(key, on);
+    node.classList.toggle(name, on);
   }
 
   update(race: Race): void {
     const p = race.player;
     if (!p) return;
-    const kmh = Math.round(p.car.physics.speed * 3.6);
-    this.set(this.speed, String(kmh));
-    this.drawGauge(kmh);
-    this.setStyle(this.turbo, 'width', `${Math.round((p.turbo / MAX_TURBO) * 100)}%`);
 
-    const damage = p.destroyed ? 100 : Math.round((1 - p.health / p.maxHealth) * 100);
-    this.set(this.damage, `${damage}%`);
-    this.setStyle(this.damageTint, 'opacity', (damage / 100).toFixed(2));
-
+    this.set(this.pos, String(p.rank));
+    this.set(this.total, String(race.racers.length));
     this.set(this.lap, String(race.playerLap()));
     this.set(this.laps, String(race.config.laps));
-    this.set(this.pos, `${p.rank}<sup>${ordinalSuffix(p.rank)}</sup>`, true);
+    this.set(this.time, formatClock(p.finished ? p.finishTime : race.raceTime));
+
+    const condition = p.destroyed ? 0 : Math.max(0, Math.ceil((p.health / p.maxHealth) * 100));
+    this.set(this.condition, String(condition));
+    this.setClass(this.conditionBox, 'warn', condition <= 50 && condition > 25);
+    this.setClass(this.conditionBox, 'crit', condition <= 25);
+    this.setStyle(this.damageTint, 'opacity', ((100 - condition) / 100).toFixed(2));
+
+    // Magazine: full bars on the right, the partly used one on the left shrinks as you fire.
     this.set(this.ammo, String(p.ammo));
+    const perBar = START_AMMO / AMMO_BARS;
+    const loaded = Math.min(p.ammo, START_AMMO) / perBar;
+    this.ammoBars.forEach((bar, i) => {
+      const fromRight = AMMO_BARS - 1 - i;
+      const fill = Math.max(0, Math.min(1, loaded - fromRight));
+      this.setStyle(bar, '--fill', `${Math.round(fill * 100)}%`);
+    });
+    this.setClass(this.dockMain, 'low', p.ammo < 20);
+
     this.set(this.mines, String(p.mines));
-    this.set(this.time, formatTime(p.finished ? p.finishTime : race.raceTime));
-    this.set(this.best, p.bestLap === null ? '--' : formatTime(p.bestLap));
-  }
+    this.setClass(this.minesCell, 'low', p.mines === 0);
 
-  /** Analog speedometer like the original's green dial. */
-  private drawGauge(kmh: number): void {
-    if (kmh === this.gaugeSpeed) return;
-    this.gaugeSpeed = kmh;
-    const ctx = this.gaugeCtx;
-    const w = this.gauge.width;
-    const h = this.gauge.height;
-    const cx = w / 2;
-    const cy = h - 6;
-    const r = h - 16;
-    const start = Math.PI * 1.05;
-    const end = Math.PI * 1.95;
-    ctx.clearRect(0, 0, w, h);
-
-    // Scale band, green to red.
-    const segments = 24;
-    for (let i = 0; i < segments; i++) {
-      const a0 = start + ((end - start) * i) / segments;
-      const a1 = start + ((end - start) * (i + 0.8)) / segments;
-      const t = i / segments;
-      const lit = t <= kmh / GAUGE_MAX;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, a0, a1);
-      ctx.lineWidth = 12;
-      const hue = 130 - t * 130;
-      ctx.strokeStyle = lit ? `hsl(${hue}, 85%, 50%)` : `hsla(${hue}, 40%, 25%, 0.6)`;
-      ctx.stroke();
-    }
-    // Ticks.
-    ctx.strokeStyle = '#cfe8d8';
-    ctx.lineWidth = 2;
-    for (let i = 0; i <= 10; i++) {
-      const a = start + ((end - start) * i) / 10;
-      const inner = r - (i % 5 === 0 ? 18 : 12);
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
-      ctx.lineTo(cx + Math.cos(a) * (r - 8), cy + Math.sin(a) * (r - 8));
-      ctx.stroke();
-    }
-    // Needle.
-    const a = start + (end - start) * Math.min(1.04, kmh / GAUGE_MAX);
-    ctx.strokeStyle = '#ff5a1f';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4));
-    ctx.stroke();
-    ctx.fillStyle = '#ddd';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-    ctx.fill();
+    const turbo = Math.round((p.turbo / MAX_TURBO) * 100);
+    this.setStyle(this.turbo, 'width', `${turbo}%`);
+    this.set(this.turboNum, String(turbo));
+    this.setClass(this.turboCell, 'low', turbo < 20);
   }
 
   showBanner(text: string): void {
