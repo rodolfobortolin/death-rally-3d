@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 
-
 /**
  * Renders a small 3/4 view of a car into a data URL, using the main renderer.
  * The frame is drawn to the WebGL canvas and copied immediately, before the
  * browser presents it, so nothing flashes on screen.
+ *
+ * Returns null while the WebGL canvas is smaller than the portrait (for example
+ * zero-sized before the page has been laid out); callers should retry later.
  */
 export function renderCarPortrait(
   renderer: THREE.WebGLRenderer,
@@ -12,7 +14,11 @@ export function renderCarPortrait(
   environment: THREE.Texture | null,
   width = 240,
   height = 144,
-): string {
+): string | null {
+  const src = renderer.domElement;
+  const pr = renderer.getPixelRatio();
+  if (src.width < width * pr || src.height < height * pr) return null;
+
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x15120f);
   scene.environment = environment;
@@ -36,7 +42,6 @@ export function renderCarPortrait(
   camera.position.set(1.3, 3.3, 7.0);
   camera.lookAt(0.1, 0.55, 0);
 
-  const pr = renderer.getPixelRatio();
   const size = renderer.getSize(new THREE.Vector2());
   const prevTarget = renderer.getRenderTarget();
   const prevToneMapping = renderer.toneMapping;
@@ -51,7 +56,6 @@ export function renderCarPortrait(
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
   // The viewport sits at the bottom-left of the drawing buffer.
-  const src = renderer.domElement;
   ctx.drawImage(src, 0, src.height - height * pr, width * pr, height * pr, 0, 0, canvas.width, canvas.height);
 
   renderer.setScissorTest(false);

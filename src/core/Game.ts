@@ -49,6 +49,7 @@ export class Game {
   private pendingMine = false;
   /** Width of the HUD sidebar, so the camera can center the car in the free area. */
   private hudInset = 0;
+  private previewsPending = true;
 
   constructor(container: HTMLElement) {
     this.cameraRig = new FollowCamera(window.innerWidth / window.innerHeight);
@@ -71,21 +72,26 @@ export class Game {
 
     window.addEventListener('resize', () => this.onResize());
     this.onResize();
-    this.buildCarPreviews();
     this.enterMenu();
   }
 
-  /** Renders a showroom shot of every selectable car for the garage panel. */
+  /**
+   * Renders a showroom shot of every selectable car for the garage panel. Runs from the
+   * frame loop until it succeeds, since the canvas can have no size yet at startup.
+   */
   private buildCarPreviews(): void {
     const previews = new Map<string, string>();
     for (const def of CARS) {
       const model = createCarModel({ bodyColor: def.color, stripeColor: def.stripe, bodyType: def.bodyType, number: def.number });
       new CarDamage(model, 1).apply(0, false); // adds the paint's vertex colors
-      previews.set(def.id, renderCarPortrait(this.renderer.webgl, model.root, this.scene.environment, 400, 240));
+      const image = renderCarPortrait(this.renderer.webgl, model.root, this.scene.environment, 400, 240);
       model.root.traverse((o) => {
         if (o instanceof THREE.Mesh) o.geometry.dispose();
       });
+      if (!image) return;
+      previews.set(def.id, image);
     }
+    this.previewsPending = false;
     this.menu.setCarPreviews(previews);
   }
 
@@ -119,7 +125,7 @@ export class Game {
     this.race = race;
     this.scene.add(race.group);
     if (config.withPlayer) {
-      const portraits = new Map(race.racers.map((r) => [r, renderCarPortrait(this.renderer.webgl, r.car.object, this.scene.environment)] as const));
+      const portraits = new Map(race.racers.map((r) => [r, renderCarPortrait(this.renderer.webgl, r.car.object, this.scene.environment) ?? ''] as const));
       this.standings.build(race, portraits);
       if (race.player) this.hud.setPortrait(portraits.get(race.player) ?? '');
       this.nameTags.build(race);
@@ -216,6 +222,7 @@ export class Game {
     const dt = Math.min(rawDt, MAX_FRAME_TIME);
     this.fps.update(rawDt);
     this.handleGlobalKeys();
+    if (this.previewsPending) this.buildCarPreviews();
 
     const race = this.race;
     const simulate = race && this.state !== 'paused';
