@@ -20,7 +20,7 @@ Open http://localhost:5173 in your browser.
 | W / ↑ | Accelerate |
 | S / ↓ | Brake / reverse |
 | A D / ← → | Steer |
-| Space | Handbrake (drift) |
+| Space | Handbrake: tap with steering to throw the car into a drift; hold the throttle to power-slide out, countersteer to straighten |
 | J / Z | Machine gun |
 | K / X | Drop mine |
 | Shift / L | Turbo |
