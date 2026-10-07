@@ -113,7 +113,7 @@ export class Game {
     this.cameraRig.mode = 'cinematic';
     this.hudInset = 0;
     this.onResize();
-    this.setRace({ laps: 99, opponents: 6, difficulty: 'hard', withPlayer: false });
+    this.setRace({ laps: 99, opponents: 6, difficulty: 'hard', withPlayer: false, respawn: true });
     this.hud.setVisible(false);
     this.menu.show('menu');
     this.sound.playMusic('menu-theme');

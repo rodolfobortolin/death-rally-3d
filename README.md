@@ -32,7 +32,7 @@ Open http://localhost:5173 in your browser.
 
 - Race against up to 7 AI rivals over 1 to 8 laps, on easy, normal or hard.
 - Every car has armor, a hood-mounted machine gun, mines and a turbo tank.
-- Wrecked cars explode, damage anything nearby and respawn after a few seconds; whoever caused it gets the kill.
+- Wrecked cars explode, damage anything nearby and are out of the race, left burning on the track as obstacles; whoever caused it gets the kill. If you get wrecked, the race is over for you. Turn on RESPAWN in the menu to bring wrecks back after a few seconds instead.
 - Floating crates on the track refill **repair** (green), **ammo** (yellow), **turbo** (blue) and **mines** (red).
 - Weapons stay locked for the first 4 seconds after the start.
 

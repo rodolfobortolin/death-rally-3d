@@ -18,6 +18,8 @@ export interface RaceConfig {
   difficulty: Difficulty;
   /** False for the attract-mode race running behind the main menu. */
   withPlayer: boolean;
+  /** Wrecked cars come back after a few seconds. Off by default: like the original, a wreck is out of the race. */
+  respawn: boolean;
 }
 
 export interface RaceResult {
@@ -31,6 +33,8 @@ export interface RaceResult {
   bestLap: number | null;
   kills: number;
   wrecks: number;
+  /** Eliminated from the race (no respawn). */
+  wrecked: boolean;
 }
 
 export interface RaceMessage {
@@ -79,7 +83,8 @@ export class Race {
 
   private readonly drivers = new Map<Racer, AIDriver>();
   private readonly inputs = new Map<Racer, DriveInput>();
-  private finishOrder: Racer[] = [];
+  /** Cars knocked out of the race, in the order they were wrecked. */
+  private outOrder: Racer[] = [];
   private finishDelay = -1;
   private wrongWayTime = 0;
   private lastCountdownBeep = 4;
@@ -135,7 +140,16 @@ export class Race {
       onWreck: (victim, killer) => {
         const text = killer ? `${killer.name} wrecked ${victim.name}` : `${victim.name} wrecked`;
         this.onMessage({ text, banner: false });
-        if (victim.isPlayer) this.onMessage({ text: 'WRECKED!', banner: true });
+        if (!config.respawn && !victim.finished) {
+          this.outOrder.push(victim);
+          if (victim.isPlayer && this.finishDelay < 0) {
+            // Race over for the player: let the explosion play, then show the results.
+            this.onMessage({ text: 'WRECKED!', banner: true });
+            this.finishDelay = 3.5;
+          }
+        } else if (victim.isPlayer) {
+          this.onMessage({ text: 'WRECKED!', banner: true });
+        }
       },
     });
     this.pickups = new Pickups(track, effects, sound);
@@ -215,14 +229,15 @@ export class Race {
       if (cmd.fire && armed) this.combat.tryFire(r, r.isPlayer && !r.finished ? 0 : this.drivers.get(r)!.spread);
       if (cmd.dropMine && armed) this.combat.tryDropMine(r);
 
-      if (r.destroyed) {
+      if (r.destroyed && this.config.respawn) {
         r.respawnTimer -= dt;
         if (r.respawnTimer <= 0) {
           r.car.resetToTrack();
           r.repair();
         }
       }
-      this.updateLaps(r);
+      // A burnt-out wreck stays on the track as an obstacle but no longer races.
+      if (!this.isOut(r)) this.updateLaps(r);
     }
 
     this.resolveCarCollisions();
@@ -259,7 +274,6 @@ export class Race {
       if (this.config.withPlayer && r.lapsDone >= this.config.laps && !r.finished) {
         r.finished = true;
         r.finishTime = this.raceTime;
-        this.finishOrder.push(r);
         if (r.isPlayer) {
           this.onMessage({ text: 'FINISH!', banner: true });
           this.finishDelay = 2.5;
@@ -318,15 +332,22 @@ export class Race {
     }
   }
 
-  private updateStandings(): void {
+  /** True when the racer was wrecked and will not come back. */
+  isOut(r: Racer): boolean {
+    return this.outOrder.includes(r);
+  }
+
+  /** Finishers by time, then cars still running by progress, then wrecks (last wrecked ranks highest). */
+  private ordered(): Racer[] {
     const L = this.track.length;
-    const sorted = [...this.racers].sort((a, b) => {
-      if (a.finished && b.finished) return a.finishTime - b.finishTime;
-      if (a.finished) return -1;
-      if (b.finished) return 1;
-      return b.progress(L) - a.progress(L);
-    });
-    sorted.forEach((r, i) => (r.rank = i + 1));
+    const out = [...this.outOrder].reverse();
+    const running = this.racers.filter((r) => !r.finished && !this.isOut(r)).sort((a, b) => b.progress(L) - a.progress(L));
+    const finished = this.racers.filter((r) => r.finished && !this.isOut(r)).sort((a, b) => a.finishTime - b.finishTime);
+    return [...finished, ...running, ...out];
+  }
+
+  private updateStandings(): void {
+    this.ordered().forEach((r, i) => (r.rank = i + 1));
   }
 
   private updateWrongWay(dt: number): void {
@@ -344,21 +365,17 @@ export class Race {
   }
 
   results(): RaceResult[] {
-    const L = this.track.length;
-    const order = [
-      ...this.finishOrder,
-      ...this.racers.filter((r) => !r.finished).sort((a, b) => b.progress(L) - a.progress(L)),
-    ];
-    return order.map((r, i) => ({
+    return this.ordered().map((r, i) => ({
       rank: i + 1,
       name: r.name,
       isPlayer: r.isPlayer,
       color: r.profile.color,
-      time: r.finished ? r.finishTime : this.estimateFinish(r),
-      estimated: !r.finished,
+      time: r.finished ? r.finishTime : this.isOut(r) ? null : this.estimateFinish(r),
+      estimated: !r.finished && !this.isOut(r),
       bestLap: r.bestLap,
       kills: r.kills,
       wrecks: r.wrecks,
+      wrecked: this.isOut(r),
     }));
   }
 

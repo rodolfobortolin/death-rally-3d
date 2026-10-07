@@ -9,6 +9,7 @@ export interface Settings {
   opponents: number;
   difficulty: Difficulty;
   sound: boolean;
+  respawn: boolean;
 }
 
 const OPTIONS = {
@@ -16,12 +17,13 @@ const OPTIONS = {
   opponents: [1, 3, 5, 7],
   difficulty: ['easy', 'normal', 'hard'] as Difficulty[],
   sound: [true, false],
+  respawn: [false, true],
 };
 
 const STORAGE_KEY = 'death-rally-3d.settings';
 
 function loadSettings(): Settings {
-  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true };
+  const defaults: Settings = { laps: 3, opponents: 5, difficulty: 'normal', sound: true, respawn: false };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return { ...defaults, ...(JSON.parse(raw) as Partial<Settings>) };
@@ -83,7 +85,7 @@ export class Menu {
   }
 
   raceConfig(): RaceConfig {
-    return { laps: this.settings.laps, opponents: this.settings.opponents, difficulty: this.settings.difficulty, withPlayer: true };
+    return { laps: this.settings.laps, opponents: this.settings.opponents, difficulty: this.settings.difficulty, withPlayer: true, respawn: this.settings.respawn };
   }
 
   private cycle(key: keyof Settings, dir: number): void {
@@ -103,7 +105,7 @@ export class Menu {
   private renderOptions(): void {
     const label = (key: keyof Settings): string => {
       const v = this.settings[key];
-      if (key === 'sound') return v ? 'ON' : 'OFF';
+      if (key === 'sound' || key === 'respawn') return v ? 'ON' : 'OFF';
       return String(v).toUpperCase();
     };
     document.querySelectorAll<HTMLElement>('[data-option]').forEach((row) => {
@@ -119,16 +121,16 @@ export class Menu {
       const v = n % 100;
       return n + (suffix[(v - 20) % 10] ?? suffix[v] ?? suffix[0]);
     };
-    title.textContent = me ? (me.rank === 1 ? 'YOU WIN!' : `YOU FINISHED ${ordinal(me.rank).toUpperCase()}`) : 'RESULTS';
+    title.textContent = me?.wrecked ? 'YOU WERE WRECKED' : me ? (me.rank === 1 ? 'YOU WIN!' : `YOU FINISHED ${ordinal(me.rank).toUpperCase()}`) : 'RESULTS';
     const body = document.getElementById('results-body')!;
     body.innerHTML = '';
     for (const r of results) {
       const tr = document.createElement('tr');
-      if (r.isPlayer) tr.className = 'me';
+      tr.className = [r.isPlayer ? 'me' : '', r.wrecked ? 'out' : ''].join(' ').trim();
       const cells = [
         String(r.rank),
         '',
-        r.time === null ? 'DNF' : `${r.estimated ? '~' : ''}${formatTime(r.time)}`,
+        r.wrecked ? 'WRECKED' : r.time === null ? 'DNF' : `${r.estimated ? '~' : ''}${formatTime(r.time)}`,
         r.bestLap === null ? '--' : formatTime(r.bestLap),
         String(r.kills),
         String(r.wrecks),

@@ -166,6 +166,7 @@ h2 { font-family: var(--display); font-weight: 400; font-size: 40px; color: var(
 .controls-table td:last-child { text-align: right; }
 .results-table th { text-align: left; font-size: 12px; letter-spacing: 2px; color: var(--accent); padding: 6px; }
 .results-table td { padding: 8px 6px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-variant-numeric: tabular-nums; font-weight: 700; }
+.results-table tr.out td { color: #8a8580; }
 .results-table tr.me td { background: rgba(255, 140, 30, 0.18); }
 .results-table .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 8px; vertical-align: -1px; }
 .pickup-legend { display: flex; justify-content: space-between; margin: 4px 0 12px; font-weight: 700; }

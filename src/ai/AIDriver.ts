@@ -55,9 +55,9 @@ export class AIDriver {
     }
     let targetLane = this.lane;
 
-    // Cars ahead: move to the side with more room to overtake.
+    // Cars ahead (wrecks included): move to the side with more room to overtake.
     for (const other of world.racers) {
-      if (other === r || other.destroyed) continue;
+      if (other === r) continue;
       const gap = wrapGap(other.car.trackAlong - car.trackAlong, track.length);
       if (gap > 0 && gap < 22) {
         const latDiff = other.car.trackLateral - car.trackLateral;
