@@ -7,9 +7,7 @@ import type { Track } from '../world/Track';
 export interface RacerProfile {
   name: string;
   color: number;
-  stripe: number;
   bodyType: CarBodyType;
-  number: number;
   isPlayer: boolean;
   /** 0..1+, scales AI top speed, aim and aggression. Ignored for the player. */
   skill: number;
@@ -59,7 +57,7 @@ export class Racer {
     readonly maxHealth = MAX_HEALTH,
   ) {
     this.health = maxHealth;
-    this.car = new Car(track, { bodyColor: profile.color, stripeColor: profile.stripe, bodyType: profile.bodyType, number: profile.number }, spec, {
+    this.car = new Car(track, { bodyColor: profile.color, bodyType: profile.bodyType }, spec, {
       onImpact: (x, y, z, s) => onWallImpact(this, x, y, z, s),
     });
   }

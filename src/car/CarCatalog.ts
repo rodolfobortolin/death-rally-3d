@@ -19,8 +19,8 @@ export interface CarUpgrades {
 export const STOCK_UPGRADES: CarUpgrades = { engine: 0, tires: 0, armor: 0 };
 /**
  * Levels per part. Each level adds one point (engine: speed and acceleration), so a
- * fully upgraded car gains 8 rating points: about what the next tier has stock, and
- * never enough to catch a car two tiers up.
+ * fully upgraded car gains 8 rating points: a little more than the next tier has stock,
+ * and never enough to catch a car two tiers up.
  */
 export const MAX_UPGRADE_LEVEL = 2;
 export const MAX_RATING = 10;
@@ -32,68 +32,79 @@ export interface CarDef {
   tagline: string;
   bodyType: CarBodyType;
   color: number;
-  stripe: number;
-  number: number;
-  /** 1 = starter ... 4 = end-game supercar. Stock rating total rises about 7 points per tier. */
+  /** 1 = starter ... 6 = end-game supercar. Stock rating total rises 6 points per tier. */
   tier: number;
-  /** Shop price for the campaign. */
+  /** Shop price for the campaign, as in the original game. */
   price: number;
   stats: CarStats;
 }
 
+/** The lineup of the original Death Rally, in its showroom colors. */
 export const CARS: CarDef[] = [
   {
     id: 'vagabond',
     name: 'Vagabond',
-    tagline: 'Rusty dune buggy. Cheap, light and nimble, but slow and it falls apart fast.',
-    bodyType: 'buggy',
-    color: 0xc8201a,
-    stripe: 0xf2f2f2,
-    number: 1,
+    tagline: 'Tired old bug. Dirt cheap and easy to throw around, but slow and it folds under fire.',
+    bodyType: 'vagabond',
+    color: 0x5a2bc8,
     tier: 1,
-    price: 0,
-    stats: { speed: 2, acceleration: 4, handling: 5, armor: 2 },
+    price: 500,
+    stats: { speed: 1, acceleration: 2, handling: 4, armor: 1 },
   },
   {
     id: 'dervish',
     name: 'Dervish',
-    tagline: 'Street muscle car. No weak spots, no real strengths either.',
-    bodyType: 'muscle',
-    color: 0x1c1c1e,
-    stripe: 0xd8241a,
-    number: 1,
+    tagline: 'Pickup with a bull bar. A real step up in pace, and it can take a few hits.',
+    bodyType: 'dervish',
+    color: 0xd9a514,
     tier: 2,
-    price: 15000,
-    stats: { speed: 5, acceleration: 5, handling: 5, armor: 5 },
+    price: 2500,
+    stats: { speed: 3, acceleration: 4, handling: 3, armor: 4 },
   },
   {
     id: 'sentinel',
     name: 'Sentinel',
-    tagline: 'Armored pickup. Heavy and quick enough, and it shrugs off bullets and mines.',
-    bodyType: 'pickup',
-    color: 0x6f757c,
-    stripe: 0xf0b020,
-    number: 1,
+    tagline: 'Solid four-door sedan. No weak spots, and tough for its class.',
+    bodyType: 'sentinel',
+    color: 0xc81e1e,
     tier: 3,
-    price: 40000,
-    stats: { speed: 6, acceleration: 5, handling: 6, armor: 9 },
+    price: 6500,
+    stats: { speed: 4, acceleration: 5, handling: 5, armor: 6 },
   },
   {
     id: 'shrieker',
     name: 'Shrieker',
-    tagline: 'The supercar. Brutal speed and grip with real armor. Built for the title.',
-    bodyType: 'muscle',
-    color: 0xd62870,
-    stripe: 0x111111,
-    number: 1,
+    tagline: 'Muscle coupe. Loud, quick off the line and happy to trade paint.',
+    bodyType: 'shrieker',
+    color: 0x1c62c8,
     tier: 4,
-    price: 90000,
-    stats: { speed: 9, acceleration: 9, handling: 8, armor: 7 },
+    price: 11500,
+    stats: { speed: 6, acceleration: 7, handling: 6, armor: 7 },
+  },
+  {
+    id: 'wraith',
+    name: 'Wraith',
+    tagline: 'Rear-engined sports car. Razor-sharp handling and serious speed.',
+    bodyType: 'wraith',
+    color: 0xd41616,
+    tier: 5,
+    price: 25000,
+    stats: { speed: 8, acceleration: 8, handling: 9, armor: 7 },
+  },
+  {
+    id: 'deliverator',
+    name: 'Deliverator',
+    tagline: 'The ultimate machine. Fastest, toughest and built for the title.',
+    bodyType: 'deliverator',
+    color: 0x58c81e,
+    tier: 6,
+    price: 45000,
+    stats: { speed: 10, acceleration: 10, handling: 9, armor: 9 },
   },
 ];
 
 export const DEFAULT_CAR_ID = 'vagabond';
-export const TIER_NAMES = ['', 'STARTER', 'CONTENDER', 'VETERAN', 'SUPERCAR'];
+export const TIER_NAMES = ['', 'STARTER', 'ROOKIE', 'CONTENDER', 'VETERAN', 'ELITE', 'SUPERCAR'];
 
 export function carById(id: string): CarDef {
   return CARS.find((c) => c.id === id) ?? CARS.find((c) => c.id === DEFAULT_CAR_ID)!;

@@ -56,13 +56,13 @@ const CAR_RADIUS = 1.05;
 const CAR_CIRCLE_OFFSET = 1.1;
 
 const RIVALS: Array<Omit<RacerProfile, 'isPlayer' | 'skill'>> = [
-  { name: 'Viper', color: 0x2f8a3a, stripe: 0x111111, bodyType: 'buggy', number: 7 },
-  { name: 'Razor', color: 0x1f4fa8, stripe: 0xf2f2f2, bodyType: 'muscle', number: 23 },
-  { name: 'Sledge', color: 0xd8a51c, stripe: 0x111111, bodyType: 'pickup', number: 4 },
-  { name: 'Mad Dog', color: 0x6a2a8a, stripe: 0xe8c040, bodyType: 'muscle', number: 66 },
-  { name: 'Bones', color: 0xe6e2da, stripe: 0x1a1a1a, bodyType: 'buggy', number: 13 },
-  { name: 'Cinder', color: 0xd85a10, stripe: 0x222222, bodyType: 'pickup', number: 9 },
-  { name: 'Ghost', color: 0x2e4a44, stripe: 0xd02020, bodyType: 'pickup', number: 0 },
+  { name: 'Viper', color: 0x2f8a3a, bodyType: 'shrieker' },
+  { name: 'Razor', color: 0x1f4fa8, bodyType: 'wraith' },
+  { name: 'Sledge', color: 0xd8a51c, bodyType: 'dervish' },
+  { name: 'Mad Dog', color: 0x6a2a8a, bodyType: 'sentinel' },
+  { name: 'Bones', color: 0xe6e2da, bodyType: 'vagabond' },
+  { name: 'Cinder', color: 0xd85a10, bodyType: 'deliverator' },
+  { name: 'Ghost', color: 0x2e4a44, bodyType: 'sentinel' },
 ];
 
 const SKILL: Record<Difficulty, [number, number]> = {
@@ -129,7 +129,7 @@ export class Race {
     if (config.withPlayer) {
       const { spec, maxHealth } = buildCar(playerCar, config.upgrades ?? STOCK_UPGRADES);
       const p = playerCar;
-      const profile: RacerProfile = { name: 'You', color: p.color, stripe: p.stripe, bodyType: p.bodyType, number: p.number, isPlayer: true, skill: 1 };
+      const profile: RacerProfile = { name: 'You', color: p.color, bodyType: p.bodyType, isPlayer: true, skill: 1 };
       const player = new Racer(profile, track, spec, onWall, maxHealth);
       this.racers.push(player);
       this.player = player;

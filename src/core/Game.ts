@@ -92,7 +92,7 @@ export class Game {
   private buildCarPreviews(): void {
     const previews = new Map<string, string>();
     for (const def of CARS) {
-      const model = createCarModel({ bodyColor: def.color, stripeColor: def.stripe, bodyType: def.bodyType, number: def.number });
+      const model = createCarModel({ bodyColor: def.color, bodyType: def.bodyType });
       new CarDamage(model, 1).apply(0, false); // adds the paint's vertex colors
       const image = renderCarPortrait(this.renderer.webgl, model.root, this.scene.environment, 400, 240);
       model.root.traverse((o) => {
