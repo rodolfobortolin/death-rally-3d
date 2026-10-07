@@ -127,7 +127,7 @@ export function buildCar(def: CarDef, upgrades: CarUpgrades = STOCK_UPGRADES): B
       acceleration: 14 + s.acceleration * 1.5,
       steering: 2.1 + s.handling * 0.1,
       grip: 6.5 + s.handling * 0.5,
-      handbrakeGrip: 1.6 + s.handling * 0.1,
+      handbrakeGrip: 1.0 + s.handling * 0.1,
     },
     maxHealth: Math.round(60 + s.armor * 10),
   };

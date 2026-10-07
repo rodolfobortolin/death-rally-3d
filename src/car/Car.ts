@@ -151,7 +151,6 @@ export class Car {
     return (
       (Math.abs(p.slip) > 3.5 && speed > 6) ||
       (input.handbrake && speed > 5) ||
-      (p.drift > 0.3 && speed > 6) ||
       (p.isBraking && input.brake > 0 && p.forwardSpeed > 14)
     );
   }
